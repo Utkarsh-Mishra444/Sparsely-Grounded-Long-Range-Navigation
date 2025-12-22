@@ -1,0 +1,61 @@
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Cache
+cache/
+*.lmdb
+*.mdb
+
+# Environment
+.env
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rate limit coordination
+rate_limit/
+
+# Config with secrets (use config.example.yml as template)
+config.yml
+
+# Environment files
+.env
+.env.*
+
+# Generated logs and data
+logs/
+videos/
+
+# Data archives
+*.zip
+
+# Staging folder for cleanup
+_to_move_out/
+trash/
+
+# Generated file lists
+all_files.txt
+
+# Internal documentation (not for public release)
+docs/

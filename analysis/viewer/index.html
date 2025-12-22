@@ -1,0 +1,2604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enhanced Experiment Viewer</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; display: flex; }
+        #sidebar { position: relative; min-width: 220px; max-width: 60vw; overflow-y: auto; padding: 10px; background: #f0f0f0; }
+        #sidebar-resizer {
+            position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: ew-resize;
+            background: linear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,0.05));
+        }
+        #map { flex: 1; height: 100vh; }
+        /* Simple inline spinner */
+        .spinner { width: 14px; height: 14px; border: 2px solid #bbb; border-top-color: #3F51B5; border-radius: 50%; display: inline-block; animation: spin 0.8s linear infinite; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Result highlight pulse */
+        .pulse { animation: pulseBg 1.5s ease-out 2; }
+        @keyframes pulseBg { 0% { background: #fff6d6; } 100% { background: #fafafa; } }
+        .experiment { 
+            padding: 10px; 
+            margin: 5px; 
+            background: white; 
+            cursor: pointer; 
+            border: 1px solid #ccc;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .experiment.successful {
+            background: #e0f2e0;
+            border-left: 4px solid #4CAF50;
+        }
+        .experiment:hover { background: #e0e0e0; }
+        .experiment.successful:hover { background: #c8e6c9; }
+        .experiment strong {
+            display: block;
+            word-break: break-word;
+        }
+        .folder {
+            padding: 10px; 
+            margin: 5px; 
+            background: #f9f9ff; 
+            cursor: pointer; 
+            border: 1px solid #ccc;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            border-left: 4px solid #3F51B5;
+            display: flex;
+            align-items: center;
+        }
+        .folder:hover { background: #e0e0f0; }
+        .folder-icon {
+            margin-right: 8px;
+            color: #3F51B5;
+            font-size: 1.2em;
+        }
+        .success-indicator {
+            margin-left: 5px;
+            color: #4CAF50;
+            font-size: 1em;
+        }
+        .folder span {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .navigation-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        #back-button {
+            padding: 3px 8px;
+            cursor: pointer;
+            background: #3F51B5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        #back-button:hover {
+            background: #303F9F;
+        }
+        #details { display: none; position: fixed; top: 70px; right: 20px; width: 400px; max-height: 70vh; background: white; padding: 15px; border: 1px solid #000; box-shadow: 0 0 10px rgba(0,0,0,0.2); z-index: 1000; overflow-y: auto; }
+        #details-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        #details-close { cursor: pointer; font-size: 20px; }
+        .decision-data { white-space: pre-wrap; font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+        .decision-data.expanded { max-height: 80vh; position: relative; z-index: 2000; }
+        .expand-btn { cursor: pointer; color: #3F51B5; font-size: 14px; text-decoration: underline; display: block; margin-top: 5px; }
+        #controls { position: fixed; bottom: 20px; right: 20px; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.2); z-index: 1000; }
+        .control-btn { margin: 5px; padding: 8px 12px; cursor: pointer; }
+        #timeline { position: fixed; bottom: 70px; left: 320px; right: 20px; height: 30px; background: rgba(255,255,255,0.8); z-index: 1000; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
+        #trail-length-control { margin-top: 10px; }
+        .info-box { margin-top: 10px; padding: 5px; background: #f9f9f9; border-radius: 3px; }
+        .decision-field { margin-bottom: 10px; }
+        .decision-field-label { font-weight: bold; margin-bottom: 3px; }
+        .decision-highlight { background-color: #ffeb3b; padding: 2px; }
+        
+        /* Decision point info styling */
+        #decision-points-count {
+            color: #FF5722;
+            font-weight: bold;
+        }
+        
+        /* Chain of Thought styling */
+        .cot-data { 
+            white-space: pre-wrap; 
+            font-family: monospace; 
+            font-size: 12px; 
+            background: #e3f2fd; 
+            padding: 10px; 
+            border-radius: 4px; 
+            max-height: 300px; 
+            overflow-y: auto; 
+            border-left: 3px solid #2196F3;
+        }
+        .cot-data.expanded { 
+            max-height: 80vh; 
+            position: relative; 
+            z-index: 2000; 
+        }
+        /* Config bubble overlay */
+        #config-bubble { display: none; position: fixed; top: 120px; right: 20px; width: 480px; max-height: 70vh; background: white; padding: 15px; border: 1px solid #000; box-shadow: 0 0 10px rgba(0,0,0,0.2); z-index: 1200; overflow-y: auto; }
+        #config-bubble-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        #config-bubble-close { cursor: pointer; font-size: 20px; }
+        #config-bubble pre { white-space: pre-wrap; font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 10px; border-radius: 4px; }
+        
+        .experiments-count {
+            margin: 5px 0;
+            font-size: 0.9em;
+            color: #666;
+            padding: 5px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        
+        /* Branch toggle sidebar */
+        #branch-toggles {
+            display: none;
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            width: 250px;
+            max-height: 70vh;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border: 1px solid #000;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 900;
+            overflow-y: auto;
+        }
+        #branch-toggles-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+        #branch-toggles-close {
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .branch-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .branch-item:hover {
+            background-color: #f0f0f0;
+        }
+        .branch-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 1px solid #333;
+            box-shadow: 0 0 3px rgba(0,0,0,0.3);
+        }
+        .branch-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.9em;
+        }
+        .branch-indent {
+            display: inline-block;
+            width: 15px;
+            height: 14px;
+            margin-right: 5px;
+            border-left: 3px solid #999;
+            border-bottom: 3px solid #999;
+        }
+        .branch-toggle {
+            margin-left: 5px;
+            cursor: pointer;
+            transform: scale(1.3);
+        }
+        .branch-main-indicator {
+            margin-left: 5px;
+            font-weight: bold;
+            color: #FF4500;
+            font-size: 0.8em;
+        }
+        #toggle-branches-btn {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            z-index: 800;
+            padding: 8px 12px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #toggle-branches-btn:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div id="sidebar-resizer" title="Drag to resize sidebar"></div>
+        <h2>Experiments</h2>
+        <div>
+            <input 
+                type="text" 
+                id="experiment-search" 
+                placeholder="Search experiments..." 
+                style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;" 
+            />
+            <select id="success-filter" style="width: 100%; padding: 6px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="all">All runs</option>
+                <option value="success">Successful only</option>
+                <option value="failed">Failed only</option>
+            </select>
+        </div>
+        <div class="navigation-header">
+            <button id="back-button" style="margin-right: 5px; display: none;" title="Go Up One Level">↑ Up</button>
+            <span id="current-path" style="font-size: 0.9em; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Root</span>
+            <button id="show-all-paths-btn" style="margin-left: 8px;">Show all paths here</button>
+        </div>
+        <div class="experiments-count">
+            <div><span id="experiment-count">0</span> experiment(s) in current view</div>
+            <div>Total: <span id="total-experiment-count">0</span> experiment(s) in all subdirectories</div>
+        </div>
+        <div id="experiment-list"></div>
+        <div class="info-box">
+            <div><b>Current Speed:</b> <span id="current-speed">0 km/h</span></div>
+            <div><b>Total Distance:</b> <span id="total-distance">0 km</span></div>
+            <div><b>Points:</b> <span id="points-count">0</span></div>
+            <div><b>API Call Points:</b> <span id="decision-points-count">0</span></div>
+        </div>
+        <div id="trail-length-control">
+            <label for="trail-length">Trail Length:</label>
+            <input type="range" id="trail-length" min="10" max="1000" value="100" />
+            <span id="trail-length-value">100 points</span>
+        </div>
+        <div class="info-box">
+            <div><b>Click on any point in the path to view API call information</b></div>
+            <div style="margin-top: 5px; font-size: 0.9em; color: #666;">
+                <b style="color: #FFD700;">●</b> Gold points are API call points with analysis<br>
+                <span style="margin-left: 12px; font-size: 0.8em;">(only call_X.json files)</span><br>
+                <b style="color: #2196F3;">●</b> Blue points are regular navigation points
+            </div>
+        </div>
+        <div class="info-box">
+            <button onclick="debugDirectories()" style="padding: 5px 10px; margin: 5px; cursor: pointer;">🔍 Debug Directories</button>
+            <div style="font-size: 0.8em; color: #666;">Click to see available directories for debugging path issues</div>
+        </div>
+    </div>
+    <div id="map"></div>
+    <!-- Deep Run Analysis Panel -->
+    <div id="deep-analysis-panel" style="margin:10px; padding:8px; border:1px solid #ddd; background:#fff; position:fixed; top:10px; left:320px; right:20px; z-index:1100;">
+        <div id="deep-panel-bar" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <strong>Deep Run Analysis</strong>
+            <label for="deepDir">Directory:</label>
+            <input id="deepDir" type="text" size="60" placeholder=". or logs/&lt;group&gt;/&lt;session&gt; or any base" />
+            <button id="btnAnalyze"><span class="btn-label">Analyze</span></button>
+            <span id="deepStatus" style="color:#666;"></span>
+            <button id="btnToggleDeep" title="Hide/Show" style="margin-left:auto;">Hide</button>
+            <button id="btnToggleDeepDetails" title="Show/Hide details">Details</button>
+        </div>
+        <div id="deep-panel-content">
+            <pre id="deepSummary" style="margin-top:8px; white-space:pre-wrap; background:#fafafa; border:1px solid #eee; padding:8px; max-height:220px; overflow:auto;"></pre>
+            <pre id="deepDetails" style="display:none; margin-top:8px; white-space:pre-wrap; background:#f7f7ff; border:1px solid #e0e0ff; padding:8px; max-height:260px; overflow:auto;"></pre>
+        </div>
+    </div>
+    <button id="toggle-branches-btn" style="display: none;">Branch Controls</button>
+    <div id="branch-toggles">
+        <div id="branch-toggles-header">
+            <h3>Branch Visibility</h3>
+            <span id="branch-toggles-close">×</span>
+        </div>
+        <div id="branch-toggles-content"></div>
+    </div>
+    <div id="details">
+        <div id="details-header">
+            <h3>API Call <span id="decision-point-number"></span></h3>
+            <span id="details-close">×</span>
+        </div>
+        <div id="decision-content"></div>
+    </div>
+    <div id="config-bubble">
+        <div id="config-bubble-header">
+            <h3 id="config-bubble-title">Run Config</h3>
+            <span id="config-bubble-close">×</span>
+        </div>
+        <div style="margin-bottom:6px; font-size: 12px;"><a id="config-bubble-raw" href="#" target="_blank" rel="noopener">Open raw</a></div>
+        <pre id="config-bubble-content"></pre>
+    </div>
+    <div id="controls">
+        <button class="control-btn" id="follow-toggle">Follow Car</button>
+        <button class="control-btn" id="show-full-path">Show Full Path</button>
+        <button class="control-btn" id="show-heatmap">Toggle Heatmap</button>
+    </div>
+    <div id="timeline"></div>
+
+    <!-- IMPORTANT: Replace YOUR_GOOGLE_MAPS_API_KEY with your actual Google Maps API key -->
+    <!-- Get a key at: https://console.cloud.google.com/google/maps-apis/credentials -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=visualization,geometry&callback=initMap" async defer onerror="handleGoogleMapsError()"></script>
+    <script>
+        // Error handler for Google Maps API loading failure
+        function handleGoogleMapsError() {
+            console.error('Failed to load Google Maps API script');
+            alert('Failed to load Google Maps. Please check your internet connection and try refreshing the page.');
+        }
+        
+        // Declare global variables
+        let map;
+        let polyline;
+        let heatmap;
+        let carMarker;
+        let allCoords = [];
+        let displayedCoords = [];
+        let currentPointsCount = 0;
+        let updateInterval;
+        let followCar = true;
+        let showingFullPath = false;
+        let showingHeatmap = false;
+        let trailLength = 100;
+        let currentSpeed = 0;
+        let totalDistance = 0;
+        let lastTimestamp = null;
+        let currentExperiment = '';
+        let pointMarkers = [];
+        let decisionPoints = new Set(); // Store indices of decision points
+        let currentGalleryImages = []; // Global array for image URLs
+        let currentSelectedPoint = null;
+        let startMarker = null; // Track start marker
+        let endMarker = null;   // Track end marker
+        let destinationPolygon = null; // Track destination polygon
+        // Meta-run visualization
+        let metaPolylines = [];
+        let metaMarkers = [];
+        let metaBranches = []; // Store branch information
+        let branchHierarchy = {}; // Track parent-child relationships
+        const branchColors = ['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#46f0f0','#f032e6','#bcf60c','#fabebe','#008080','#e6beff','#9a6324','#fffac8','#800000','#aaffc3','#808000','#ffd8b1','#000075','#808080'];
+        
+        // Variables for folder navigation
+        let currentDirectoryPath = '.';
+        let navigationHistory = [];
+        
+        // Initialize the map once when the Google Maps API loads
+        function initMap() {
+            // Clear the timeout since the API loaded successfully
+            if (typeof mapsApiTimeout !== 'undefined') {
+                clearTimeout(mapsApiTimeout);
+            }
+            
+            // Check if Google Maps API is properly loaded
+            if (typeof google === 'undefined' || !google.maps) {
+                console.error('Google Maps API failed to load');
+                alert('Google Maps API failed to load. Please check your internet connection and try refreshing the page.');
+                return;
+            }
+            
+            // Check if required libraries are loaded
+            if (!google.maps.geometry) {
+                console.error('Google Maps geometry library failed to load');
+                alert('Google Maps geometry library failed to load. Some features may not work correctly.');
+            }
+            
+            if (!google.maps.visualization) {
+                console.error('Google Maps visualization library failed to load');
+                alert('Google Maps visualization library failed to load. Heatmap features may not work.');
+            }
+            
+            console.log('Google Maps API loaded successfully with libraries:', 
+                       google.maps.geometry ? 'geometry' : 'no geometry',
+                       google.maps.visualization ? 'visualization' : 'no visualization');
+            
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 0, lng: 0 },
+                zoom: 2,
+                mapTypeId: 'satellite',
+                mapTypeControl: true,
+                mapTypeControlOptions: {
+                    style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+                    mapTypeIds: ['roadmap', 'terrain', 'satellite', 'hybrid']
+                },
+                gestureHandling: 'greedy',
+                zoomControl: true,
+                zoomControlOptions: {
+                    style: google.maps.ZoomControlStyle.DEFAULT
+                }
+            });
+            
+            // Set up the controls
+            document.getElementById('follow-toggle').addEventListener('click', toggleFollow);
+            document.getElementById('show-full-path').addEventListener('click', toggleFullPath);
+            document.getElementById('show-heatmap').addEventListener('click', toggleHeatmap);
+            document.getElementById('trail-length').addEventListener('input', updateTrailLength);
+            document.getElementById('details-close').addEventListener('click', hideDetails);
+            
+            // Setup branch toggles
+            document.getElementById('toggle-branches-btn').addEventListener('click', toggleBranchSidebar);
+            document.getElementById('branch-toggles-close').addEventListener('click', closeBranchSidebar);
+            const cfgClose = document.getElementById('config-bubble-close');
+            if (cfgClose) cfgClose.addEventListener('click', () => { const el = document.getElementById('config-bubble'); if (el) el.style.display = 'none'; });
+        }
+        
+        // Toggle follow mode
+        function toggleFollow() {
+            followCar = !followCar;
+            document.getElementById('follow-toggle').innerText = followCar ? 'Stop Following' : 'Follow Car';
+        }
+        
+        // Toggle between full path and recent path
+        function toggleFullPath() {
+            showingFullPath = !showingFullPath;
+            document.getElementById('show-full-path').innerText = showingFullPath ? 'Show Recent Path' : 'Show Full Path';
+            updatePolyline();
+            if (currentExperiment && allCoords.length > 0) {
+                updatePointMarkers();
+            }
+        }
+        
+        // Toggle heatmap visualization
+        function toggleHeatmap() {
+            showingHeatmap = !showingHeatmap;
+            document.getElementById('show-heatmap').innerText = showingHeatmap ? 'Hide Heatmap' : 'Show Heatmap';
+            
+            if (showingHeatmap) {
+                if (!heatmap) {
+                    const heatmapData = allCoords.map(coord => 
+                        new google.maps.LatLng(coord.lat, coord.lng)
+                    );
+                    
+                    heatmap = new google.maps.visualization.HeatmapLayer({
+                        data: heatmapData,
+                        map: map,
+                        radius: 20,
+                        opacity: 0.7
+                    });
+                } else {
+                    heatmap.setMap(map);
+                    updateHeatmap();
+                }
+            } else if (heatmap) {
+                heatmap.setMap(null);
+            }
+        }
+        
+        // Update the trail length based on slider
+        function updateTrailLength() {
+            trailLength = parseInt(document.getElementById('trail-length').value);
+            document.getElementById('trail-length-value').innerText = `${trailLength} points`;
+            updatePolyline();
+            if (currentExperiment && allCoords.length > 0) {
+                updatePointMarkers();
+            }
+        }
+        
+        // Update the polyline based on current settings
+        function updatePolyline() {
+            if (!polyline) return;
+            
+            if (showingFullPath) {
+                polyline.setPath(allCoords.map(coord => new google.maps.LatLng(coord.lat, coord.lng)));
+            } else {
+                const recentCoords = allCoords.slice(-trailLength);
+                polyline.setPath(recentCoords.map(coord => new google.maps.LatLng(coord.lat, coord.lng)));
+            }
+        }
+        
+        // Update point markers visibility based on current settings
+        function updatePointMarkers() {
+            console.log(`🗺️ updatePointMarkers called. Current experiment: ${currentExperiment}, Decision points available:`, decisionPoints.size, Array.from(decisionPoints).sort((a,b) => a-b));
+            
+            // Don't create markers if no experiment is loaded
+            if (!currentExperiment || !allCoords || allCoords.length === 0) {
+                console.log(`⚠️ No experiment loaded or no coordinates available. Skipping marker creation.`);
+                return;
+            }
+            
+            pointMarkers.forEach(marker => {
+                // Clean up glow markers if they exist
+                if (marker.glowMarker) {
+                    marker.glowMarker.setMap(null);
+                }
+                marker.setMap(null);
+            });
+            pointMarkers = [];
+            
+            let visibleCoords = showingFullPath ? allCoords : allCoords.slice(-trailLength);
+            console.log(`Creating markers for ${visibleCoords.length} visible coordinates (showingFullPath: ${showingFullPath})`);
+            
+            visibleCoords.forEach((coord, index) => {
+                const actualIndex = showingFullPath ? coord.index : (allCoords.length - visibleCoords.length) + index;
+                addPointMarker(coord, actualIndex);
+            });
+            
+            console.log(`✅ Created ${pointMarkers.length} total markers`);
+        }
+        
+        // Add a clickable marker for a point
+        function addPointMarker(coord, index) {
+            // Check if this is a decision point by trying to find the corresponding API call file
+            const isDecisionPoint = checkIfDecisionPoint(index);
+            
+            console.log(`Creating marker for point ${index}: isDecisionPoint=${isDecisionPoint}`);
+            
+            let markerIcon;
+            if (isDecisionPoint) {
+                console.log(`🔴 Creating RED hollow decision point marker for point ${index}`);
+                // Decision point styling: hollow red ring
+                markerIcon = {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 5, // reduced to ~1/3 of previous 15
+                    fillColor: '#FF0000', // Red theme
+                    fillOpacity: 0, // Hollow circle
+                    strokeWeight: 6, // thicker ring
+                    strokeColor: '#FF0000', // Red border
+                    anchor: new google.maps.Point(0, 0) // Center the icon
+                };
+            } else {
+                console.log(`🔵 Creating blue regular point marker for point ${index}`);
+                // Regular point styling
+                markerIcon = {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 4, // Smaller for regular points
+                    fillColor: '#2196F3', // Blue for regular points
+                    fillOpacity: 0.7,
+                    strokeWeight: 1,
+                    strokeColor: '#FFFFFF'
+                };
+            }
+            
+            const marker = new google.maps.Marker({
+                position: new google.maps.LatLng(coord.lat, coord.lng),
+                map: map,
+                icon: markerIcon,
+                title: isDecisionPoint ? `API Call ${index} (Click for details)` : `Point ${index}`,
+                zIndex: isDecisionPoint ? 100 : 1, // Much higher z-index for decision points
+                optimized: false // Disable optimization for better custom styling
+            });
+            
+            // Add a prominent glow effect for decision points
+            if (isDecisionPoint) {
+                // Add a larger background circle for glow effect
+                const glowMarker = new google.maps.Marker({
+                    position: new google.maps.LatLng(coord.lat, coord.lng),
+                    map: map,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 8, // ~1/3 of 25
+                        fillColor: '#FF0000',
+                        fillOpacity: 0, // hollow glow ring
+                        strokeWeight: 6,
+                        strokeColor: '#FF0000'
+                    },
+                    zIndex: 50,
+                    optimized: false
+                });
+                // Store glow marker reference for cleanup
+                marker.glowMarker = glowMarker;
+            }
+            
+            marker.addListener('click', () => {
+                // Update current selected point
+                currentSelectedPoint = index;
+                
+                console.log(`Clicked on point ${index}, isDecisionPoint: ${isDecisionPoint}`);
+                
+                // Load the API call data
+                loadApiCallData(index);
+                
+                // Pan to this point when clicked
+                map.panTo(marker.getPosition());
+            });
+            
+            // Final confirmation of marker creation
+            const markerColor = isDecisionPoint ? '🟡 GOLD' : '🔵 BLUE';
+            console.log(`✅ Created ${markerColor} marker for point ${index} (fillColor: ${markerIcon.fillColor})`);
+            
+            pointMarkers.push(marker);
+        }
+        
+        // Check if a point is a call point
+        function checkIfDecisionPoint(pointIndex) {
+            const isDecision = decisionPoints.has(pointIndex);
+            if (isDecision) {
+                console.log(`✓ Point ${pointIndex} is an API CALL POINT`);
+            }
+            return isDecision;
+        }
+        
+        // Load API call data for a specific point
+        async function loadApiCallData(pointIndex) {
+            try {
+                // Define possible file naming patterns for each source (call files only)
+                const sources = [
+                    { 
+                        folder: 'openai_calls', 
+                        filenames: [`call_${pointIndex}.json`], 
+                        cot: `cot_${pointIndex}.txt` 
+                    },
+                    { 
+                        folder: 'gemini_calls', 
+                        filenames: [`call_${pointIndex}.json`], 
+                        cot: `cot_${pointIndex}.txt` 
+                    },
+                    { 
+                        folder: 'self_position_calls', 
+                        filenames: [`self_position_${String(pointIndex).padStart(4,'0')}.json`], 
+                        cot: null 
+                    }
+                ];
+
+                const fetchedData = [];
+
+                for (const src of sources) {
+                    console.log(`Checking ${src.folder} for point ${pointIndex}...`);
+                    // Try each possible filename pattern
+                    for (const filename of src.filenames) {
+                        try {
+                            console.log(`  → Trying: ${filename}`);
+                            // Properly encode each path segment separately
+                            const pathSegments = currentExperiment.split(/[\\\/]/).filter(Boolean);
+                            const encodedSegments = pathSegments.map(segment => encodeURIComponent(segment));
+                            const encodedPath = encodedSegments.join('/');
+                            const resp = await fetch(`/${encodedPath}/${src.folder}/${filename}`);
+                            if (resp.ok) {
+                                const dataJson = await resp.json();
+                                let cot = null;
+                                if (src.cot) {
+                                    try {
+                                        const cotResp = await fetch(`/${encodedPath}/${src.folder}/${src.cot}`);
+                                        if (cotResp.ok) cot = await cotResp.text();
+                                    } catch {}
+                                }
+                                fetchedData.push({ source: src.folder, data: dataJson, cot });
+                                const fileType = filename.startsWith('call_') ? 'call-based' : 
+                                                filename.startsWith('decision_') ? 'decision-based' : 'other';
+                                console.log(`  ✓ SUCCESS: Loaded ${fileType} data from ${filename} for point ${pointIndex}`);
+                                break; // Found a file, no need to try other patterns for this source
+                            }
+                        } catch (err) {
+                            console.log(`  ✗ Not found: ${filename}`);
+                        }
+                    }
+                }
+                
+                // Determine decision point highlight regardless of which data found
+                if (fetchedData.length > 0) {
+                    highlightDecisionPoint(pointIndex);
+                    console.log(`Highlighting decision point ${pointIndex} with ${fetchedData.length} data sources`);
+                }
+ 
+                // Build details panel contents
+                showDecisionDetailsAggregated(pointIndex, fetchedData);
+                
+            } catch (error) {
+                console.error('Error loading API call data:', error);
+                showDecisionDetails(pointIndex, null, null);
+            }
+        }
+        
+        // Highlight the selected decision point on the map
+        function highlightDecisionPoint(pointIndex) {
+            console.log(`Highlighting decision point ${pointIndex}`);
+            
+            // Reset previous highlights and restore normal styling
+            pointMarkers.forEach((marker, idx) => {
+                const title = marker.getTitle();
+                const titleMatch = title.match(/\d+/);
+                if (!titleMatch) return; // Skip if we can't parse the point index
+                
+                const markerPointIndex = parseInt(titleMatch[0]);
+                const isDecisionPoint = checkIfDecisionPoint(markerPointIndex);
+                
+                // Clean up any existing selected glow
+                if (marker.selectedGlow) {
+                    marker.selectedGlow.setMap(null);
+                    marker.selectedGlow = null;
+                }
+                
+                if (isDecisionPoint) {
+                    // Restore normal decision point styling (hollow red ring)
+                    marker.setIcon({
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 5,
+                        fillColor: '#FF0000',
+                        fillOpacity: 0, // keep hollow in all views
+                        strokeWeight: 6,
+                        strokeColor: '#FF0000', // red border
+                        anchor: new google.maps.Point(0, 0)
+                    });
+                } else {
+                    // Restore normal point styling
+                    marker.setIcon({
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 4,
+                        fillColor: '#2196F3',
+                        fillOpacity: 0.7,
+                        strokeWeight: 1,
+                        strokeColor: '#FFFFFF'
+                    });
+                }
+            });
+            
+            // Find and highlight the selected point
+            const selectedMarker = pointMarkers.find(marker => {
+                const title = marker.getTitle();
+                const titleMatch = title.match(/\d+/);
+                if (!titleMatch) return false;
+                const markerPointIndex = parseInt(titleMatch[0]);
+                return markerPointIndex === pointIndex;
+            });
+            
+            if (selectedMarker) {
+                // Highlight with a special "selected" style
+                selectedMarker.setIcon({
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 12, // Even larger for the selected point
+                    fillColor: '#FF5722', // Bright orange for the selected point
+                    fillOpacity: 1,
+                    strokeWeight: 4,
+                    strokeColor: '#FFFFFF',
+                    anchor: new google.maps.Point(0, 0)
+                });
+                
+                // Add a pulsing glow effect for the selected point
+                if (selectedMarker.selectedGlow) {
+                    selectedMarker.selectedGlow.setMap(null);
+                }
+                selectedMarker.selectedGlow = new google.maps.Marker({
+                    position: selectedMarker.getPosition(),
+                    map: map,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 7, // ~1/3 of 20
+                        fillColor: '#FF0000',
+                        fillOpacity: 0, // hollow ring for selected
+                        strokeWeight: 6,
+                        strokeColor: '#FF0000'
+                    },
+                    zIndex: 25,
+                    optimized: false
+                });
+                
+                console.log(`Successfully highlighted decision point ${pointIndex}`);
+            } else {
+                console.log(`Could not find marker for decision point ${pointIndex}`);
+            }
+        }
+        
+        // Show decision details for multiple sources (OpenAI, Gemini, self-position)
+        function showDecisionDetailsAggregated(pointIndex, sources) {
+            const detailsDiv = document.getElementById('details');
+            const contentDiv = document.getElementById('decision-content');
+            const pointNumberSpan = document.getElementById('decision-point-number');
+            
+            pointNumberSpan.innerText = pointIndex;
+            
+            let html = '';
+            if (sources.length === 0) {
+                html = `<div class="decision-field">No data available for point ${pointIndex}.</div>`;
+                contentDiv.innerHTML = html;
+                detailsDiv.style.display = 'block';
+                return;
+            }
+
+            sources.forEach(src => {
+                const { source, data, cot } = src;
+                const niceName = source === 'self_position_calls' ? 'Self-Position' : (source === 'openai_calls' ? 'OpenAI' : 'Gemini');
+
+                html += `<h4>${niceName} Output</h4>`;
+
+                // Chain of thought
+                if (cot) {
+                    html += '<div class="decision-field"><div class="decision-field-label">Chain of Thought:</div>';
+                    html += `<div class="cot-data">${escapeHtml(cot)}</div>`;
+                    html += `<a href="#" class="expand-btn" onclick="toggleResponseSize(event)">Expand/Collapse Chain of Thought</a></div>`;
+                }
+
+                if (data) {
+                    // Prompt extraction similar to original
+                    let promptText = '';
+                    if (data.prompt) promptText = data.prompt;
+                    else if (data.request && data.request.prompt) promptText = data.request.prompt;
+                    else if (data.request && data.request.system_prompt) promptText = data.request.system_prompt;
+
+                    if (promptText) {
+                        html += '<div class="decision-field"><div class="decision-field-label">Prompt:</div>';
+                        html += `<div class="decision-data">${escapeHtml(promptText)}</div></div>`;
+                    }
+
+                    html += '<div class="decision-field"><div class="decision-field-label">Response:</div>';
+                    try {
+                        // If the call contains a standard `response` field use that, otherwise fall back to the entire object
+                        let responseObj;
+                        if (data.hasOwnProperty('response') && data.response !== undefined && data.response !== null) {
+                            // Common case for OpenAI / Gemini calls
+                            responseObj = typeof data.response === 'string' ? JSON.parse(data.response) : data.response;
+                        } else {
+                            // Self-position calls (and others) often don't have a top-level `response` key – show whole payload
+                            responseObj = data;
+                        }
+                        html += `<div class="decision-data">${escapeHtml(JSON.stringify(responseObj, null, 2))}</div>`;
+                    } catch (e) {
+                        // Fallback: stringify whatever we have
+                        html += `<div class="decision-data">${escapeHtml(JSON.stringify(data, null, 2))}</div>`;
+                    }
+                    html += `<a href="#" class="expand-btn" onclick="toggleResponseSize(event)">Expand/Collapse Response</a></div>`;
+                } else {
+                    html += `<div class="decision-field">No ${niceName} data.</div>`;
+                }
+            });
+            
+            contentDiv.innerHTML = html;
+            detailsDiv.style.display = 'block';
+        }
+
+        // Backwards compatibility: existing calls still using old function
+        function showDecisionDetails(pointIndex, data, cotData) {
+            const obj = [];
+            if (data) obj.push({ source: 'openai_calls', data, cot: cotData });
+            showDecisionDetailsAggregated(pointIndex, obj);
+        }
+        
+        // Hide the details panel
+        function hideDetails() {
+            document.getElementById('details').style.display = 'none';
+        }
+        
+        // Escape HTML to prevent XSS (corrected version)
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+        
+        // Update the heatmap with new data
+        function updateHeatmap() {
+            if (!heatmap) return;
+            const heatmapData = allCoords.map(coord => new google.maps.LatLng(coord.lat, coord.lng));
+            heatmap.setData(heatmapData);
+        }
+        
+        // Calculate distance between two coordinates in kilometers
+        function calculateDistance(coord1, coord2) {
+            const R = 6371; // Radius of the earth in km
+            const dLat = deg2rad(coord2.lat - coord1.lat);
+            const dLon = deg2rad(coord2.lng - coord1.lng);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(deg2rad(coord1.lat)) * Math.cos(deg2rad(coord2.lat)) * 
+                      Math.sin(dLon/2) * Math.sin(dLon/2); 
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            return R * c;
+        }
+        
+        function deg2rad(deg) {
+            return deg * (Math.PI/180);
+        }
+        
+        // Calculate and update speed and distance
+        function updateMetrics(newCoord, timestamp) {
+            if (allCoords.length > 0) {
+                const lastCoord = allCoords[allCoords.length - 1];
+                const segmentDistance = calculateDistance(lastCoord, newCoord);
+                totalDistance += segmentDistance;
+                document.getElementById('total-distance').innerText = `${totalDistance.toFixed(2)} km`;
+            }
+            
+            if (lastTimestamp && timestamp) {
+                const timeDiff = (timestamp - lastTimestamp) / 1000;
+                if (timeDiff > 0 && allCoords.length > 0) {
+                    const lastCoord = allCoords[allCoords.length - 1];
+                    const distance = calculateDistance(lastCoord, newCoord);
+                    currentSpeed = (distance / timeDiff) * 3600;
+                    document.getElementById('current-speed').innerText = `${currentSpeed.toFixed(1)} km/h`;
+                }
+            }
+            lastTimestamp = timestamp;
+        }
+        
+        // Fetch and display the list of experiments
+        async function listExperiments() {
+            try {
+                // New approach: navigate directories
+                await navigateToDirectory(currentDirectoryPath);
+                
+                // Setup search functionality (now will search current directory only)
+                document.getElementById('experiment-search').addEventListener('input', filterExperiments);
+                const filterEl = document.getElementById('success-filter');
+                if (filterEl) filterEl.addEventListener('change', () => applySuccessFilter());
+                
+                // Show all paths button
+                const showAllBtn = document.getElementById('show-all-paths-btn');
+                if (showAllBtn) showAllBtn.addEventListener('click', () => showAllPathsInCurrentDirectory());
+
+                // Setup back button
+                document.getElementById('back-button').addEventListener('click', navigateBack);
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+        
+        // Navigate to a specific directory
+        async function navigateToDirectory(path) {
+            try {
+                // Update current path
+                currentDirectoryPath = path;
+                
+                // Update path display
+                document.getElementById('current-path').textContent = path === '.' ? 'Root' : path;
+                document.getElementById('current-path').title = path; // For tooltip on hover
+                
+                // Show or hide back button based on current path
+                if (path === '.') {
+                    document.getElementById('back-button').style.display = 'none';
+                } else {
+                    document.getElementById('back-button').style.display = 'inline-block';
+                }
+                
+                // Fetch contents of this directory
+                const response = await fetch(`/directory-contents?dir=${encodeURIComponent(path)}`);
+                if (!response.ok) throw new Error(`Failed to load directory contents: ${response.status}`);
+                const contents = await response.json();
+                
+                // Store for client-side filtering without re-fetch
+                window.currentExperiments = contents.experiments;
+                window.currentFolders = contents.folders;
+                window.currentTotal = contents.total_experiments;
+                
+                // Update the experiments count
+                document.getElementById('experiment-count').textContent = contents.experiments.length;
+                document.getElementById('total-experiment-count').textContent = contents.total_experiments;
+                
+                // Clear any multi-run overlays when changing directories
+                if (window._multiOverlays && Array.isArray(window._multiOverlays)) {
+                    window._multiOverlays.forEach(pl => { try { pl.setMap(null); } catch(e){} });
+                    window._multiOverlays = [];
+                }
+
+                // Display directory contents
+                displayDirectoryContents(contents);
+                
+                // Clear search if there was any
+                document.getElementById('experiment-search').value = '';
+            } catch (error) {
+                console.error('Error navigating to directory:', error);
+                alert(error.message);
+            }
+        }
+
+        // Plot all run paths in the current directory
+        async function showAllPathsInCurrentDirectory() {
+            try {
+                hideDetails();
+                if (updateInterval) clearInterval(updateInterval);
+                // Clear existing overlays
+                pointMarkers.forEach(m => m.setMap(null));
+                pointMarkers = [];
+                if (polyline) polyline.setMap(null);
+                if (heatmap) { heatmap.setMap(null); heatmap = null; }
+                if (carMarker) { carMarker.setMap(null); }
+
+                // Request experiment list under current directory
+                const resp = await fetch(`/experiments?dir=${encodeURIComponent(currentDirectoryPath)}`);
+                if (!resp.ok) throw new Error('Failed to list experiments');
+                const exps = await resp.json();
+
+                const bounds = new google.maps.LatLngBounds();
+                const colorPool = ['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#46f0f0','#f032e6','#bcf60c'];
+
+                for (let i = 0; i < exps.length; i++) {
+                    const exp = exps[i].replace(/\\/g, '/');
+                    const filesResp = await fetch(`/files?exp=${encodeURIComponent(exp)}`);
+                    if (!filesResp.ok) continue;
+                    const files = await filesResp.json();
+                    if (!files.length) continue;
+                    const visitedFile = files[0];
+                    const coordsResp = await fetch(`/${exp}/${visitedFile}?t=${Date.now()}`);
+                    if (!coordsResp.ok) continue;
+                    const coords = await coordsResp.json();
+                    if (!coords || !coords.length) continue;
+
+                    const path = coords.map(c => new google.maps.LatLng(c.lat, c.lng));
+                    path.forEach(pt => bounds.extend(pt));
+                    const color = colorPool[i % colorPool.length];
+                    const pl = new google.maps.Polyline({
+                        path,
+                        geodesic: true,
+                        strokeColor: '#0D47A1',
+                        strokeOpacity: 1.0,
+                        strokeWeight: 8,
+                        icons: [{
+                            icon: {
+                                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                                scale: 6,
+                                fillColor: '#00FF00',
+                                fillOpacity: 1,
+                                strokeColor: '#FFFFFF',
+                                strokeWeight: 1
+                            },
+                            offset: '0',
+                            repeat: '120px'
+                        }, {
+                            icon: {
+                                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                                scale: 8,
+                                fillColor: '#00FF00',
+                                fillOpacity: 1,
+                                strokeColor: '#FFFFFF',
+                                strokeWeight: 2
+                            },
+                            offset: '100%'
+                        }]
+                    });
+                    pl.setMap(map);
+                    // Keep track so we can clear later with navigate/load
+                    if (!window._multiOverlays) window._multiOverlays = [];
+                    window._multiOverlays.push(pl);
+                }
+
+                if (bounds && !bounds.isEmpty()) {
+                    map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
+                }
+            } catch (e) {
+                alert('Failed to show all paths: ' + e.message);
+            }
+        }
+        
+        // Navigate back to parent directory (up one level)
+        function navigateBack() {
+            // Get the parent directory path
+            const currentPath = currentDirectoryPath;
+            console.log(`🔙 Navigating back from: "${currentPath}"`);
+            
+            // If we're at root, can't go up further
+            if (currentPath === '.') {
+                console.log(`🔙 Already at root, can't go up further`);
+                return;
+            }
+            
+            // Handle both Windows (\) and Unix (/) path separators
+            const hasForwardSlash = currentPath.includes('/');
+            const hasBackSlash = currentPath.includes('\\');
+            
+            if (!hasForwardSlash && !hasBackSlash) {
+                // Single directory name, parent is root
+                console.log(`🔙 Single directory, going to root`);
+                navigateToDirectory('.');
+                return;
+            }
+            
+            // Find the last separator (either / or \)
+            const lastForwardSlash = currentPath.lastIndexOf('/');
+            const lastBackSlash = currentPath.lastIndexOf('\\');
+            const lastSeparatorIndex = Math.max(lastForwardSlash, lastBackSlash);
+            
+            // Extract parent path
+            const parentPath = lastSeparatorIndex > 0 ? currentPath.substring(0, lastSeparatorIndex) : '.';
+            
+            console.log(`🔙 Parent path: "${parentPath}"`);
+            // Navigate to the parent directory
+            navigateToDirectory(parentPath);
+        }
+        
+        // Display directory contents (folders and experiments)
+        function displayDirectoryContents(contents) {
+            const listDiv = document.getElementById('experiment-list');
+            
+            // Clear any existing items
+            listDiv.innerHTML = '';
+            
+            // Update both experiment counts
+            document.getElementById('experiment-count').textContent = contents.experiments.length;
+            document.getElementById('total-experiment-count').textContent = contents.total_experiments;
+            
+            // First display folders (apply success filter by tick presence)
+            const fvalFolders = (document.getElementById('success-filter') || {}).value || 'all';
+            const foldersFiltered = (contents.folders || []).filter(folder => {
+                if (fvalFolders === 'success') return !!folder.has_successful;   // only ticked
+                if (fvalFolders === 'failed') return !folder.has_successful;     // only without tick
+                return true;                                                     // all
+            });
+            foldersFiltered.forEach(folder => {
+                const folderDiv = document.createElement('div');
+                folderDiv.className = 'folder';
+                
+                // Get folder name from path
+                const pathParts = folder.path.split('/');
+                const name = pathParts[pathParts.length - 1];
+                
+                // Create folder HTML with success indicator if it has successful experiments
+                let folderHtml = `<div class="folder-icon">📁</div><span title="${folder.path}">${name}</span>`;
+                
+                // Add success indicator if folder contains successful experiments
+                if (folder.has_successful) {
+                    folderHtml += `<div class="success-indicator" title="Contains successful experiments">✓</div>`;
+                }
+                
+                // Add an Analyze button for deep summary (no typing)
+                folderHtml += `<button class="control-btn" style="margin-left:8px;" title="Analyze this folder">Analyze</button>`;
+                // Add a Config button to view config.yml/config.yaml in this folder
+                folderHtml += `<button class="control-btn config-btn" style="margin-left:8px;" title="View config.yml">Config</button>`;
+                
+                folderDiv.innerHTML = folderHtml;
+                
+                // Click behavior on folder name/icon navigates; Analyze button runs deep analysis
+                const analyzeBtn = folderDiv.querySelector('button.control-btn');
+                if (analyzeBtn) {
+                    analyzeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // Fill and trigger the deep analysis UI
+                        const dirInput = document.getElementById('deepDir');
+                        if (dirInput) dirInput.value = folder.path;
+                        const statusEl = document.getElementById('deepStatus');
+                        if (statusEl) statusEl.innerHTML = `<span class="spinner"></span> Analyzing: ${folder.path}`;
+                        runDeepAnalysis(folder.path);
+                    });
+                }
+                const configBtn = folderDiv.querySelector('button.config-btn');
+                if (configBtn) {
+                    configBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showConfigBubbleForPath(folder.path);
+                    });
+                }
+                
+                // If this folder is a meta-run, load all branches on map
+                if (folder.is_meta) {
+                    folderDiv.classList.add('meta-folder');
+                    folderDiv.onclick = () => loadMeta(folder.path);
+                } else {
+                    folderDiv.onclick = () => navigateToDirectory(folder.path);
+                }
+                listDiv.appendChild(folderDiv);
+            });
+            
+            // Then display experiments (apply filter)
+            const filterEl = document.getElementById('success-filter');
+            const fval = filterEl ? filterEl.value : 'all';
+            const experimentsFiltered = (contents.experiments || []).filter(exp => {
+                if (fval === 'success') return !!exp.successful;
+                if (fval === 'failed') return !exp.successful;
+                return true;
+            });
+
+            // Update the experiments count to reflect current filter
+            document.getElementById('experiment-count').textContent = experimentsFiltered.length;
+
+            experimentsFiltered.forEach(exp => {
+                const expDiv = document.createElement('div');
+                expDiv.className = 'experiment';
+                
+                // Add 'successful' class if experiment is successful
+                if (exp.successful) {
+                    expDiv.className += ' successful';
+                }
+                
+                // Format the experiment path for display - use the last part of the path as the name
+                const pathParts = exp.path.split('/');
+                const name = pathParts[pathParts.length - 1]; // Last part of the path
+                
+                // Create a more readable display with main name and full path
+                let expHtml = `<strong title="${exp.path}">${name}`;
+                
+                // Add success indicator in the title if successful
+                if (exp.successful) {
+                    expHtml += ` <span style="color: #4CAF50;" title="Successful experiment">✓</span>`;
+                }
+                
+                expHtml += `</strong>
+                    <button class="view-config-btn" style="margin-left: 6px; padding: 2px 6px; font-size: 12px;" title="View config.yml">Config</button>
+                    <div style="font-size: 0.8em; color: #666; margin-top: 3px; white-space: normal; overflow: hidden; text-overflow: ellipsis;">${exp.path}</div>`;
+                
+                expDiv.innerHTML = expHtml;
+                const cfgBtn = expDiv.querySelector('.view-config-btn');
+                if (cfgBtn) {
+                    cfgBtn.addEventListener('click', (e) => { e.stopPropagation(); showConfigBubbleForPath(exp.path); });
+                }
+                expDiv.onclick = () => loadExperiment(exp.path);
+                listDiv.appendChild(expDiv);
+            });
+            
+            // Show message if directory is empty
+            if (contents.folders.length === 0 && contents.experiments.length === 0) {
+                listDiv.innerHTML = '<div style="padding: 10px; color: #666;">This directory is empty.</div>';
+            }
+        }
+        
+        // Filter experiments based on search input (applies success filter too)
+        function filterExperiments() {
+            const searchTerm = document.getElementById('experiment-search').value.toLowerCase();
+            const filterEl = document.getElementById('success-filter');
+            const fval = filterEl ? filterEl.value : 'all';
+            
+            if (!searchTerm) {
+                // If search is empty, refresh the current directory view
+                navigateToDirectory(currentDirectoryPath);
+                return;
+            }
+            
+            // Filter current experiments that contain the search term and match success filter
+            const filtered = window.currentExperiments.filter(exp => {
+                const matchesText = exp.path.toLowerCase().includes(searchTerm);
+                const matchesFlag = (fval === 'all') || (fval === 'success' && !!exp.successful) || (fval === 'failed' && !exp.successful);
+                return matchesText && matchesFlag;
+            });
+            
+            // Update the experiments count for filtered results
+            document.getElementById('experiment-count').textContent = filtered.length;
+            // Keep the total count unchanged during filtering
+            
+            // Display filtered experiments without folders
+            const listDiv = document.getElementById('experiment-list');
+            listDiv.innerHTML = '';
+            
+            if (filtered.length === 0) {
+                listDiv.innerHTML = '<div style="padding: 10px; color: #666;">No experiments found matching your search.</div>';
+                return;
+            }
+            
+            filtered.forEach(exp => {
+                const expDiv = document.createElement('div');
+                expDiv.className = 'experiment';
+                
+                // Add 'successful' class if experiment is successful
+                if (exp.successful) {
+                    expDiv.className += ' successful';
+                }
+                
+                // Format the experiment path for display - use the last part of the path as the name
+                const pathParts = exp.path.split('/');
+                const name = pathParts[pathParts.length - 1]; // Last part of the path
+                
+                // Create a more readable display with main name and full path
+                let expHtml = `<strong title="${exp.path}">${name}`;
+                
+                // Add success indicator in the title if successful
+                if (exp.successful) {
+                    expHtml += ` <span style="color: #4CAF50;" title="Successful experiment">✓</span>`;
+                }
+                
+                expHtml += `</strong>
+                    <button class=\"view-config-btn\" style=\"margin-left: 6px; padding: 2px 6px; font-size: 12px;\" title=\"View config.yml\">Config</button>
+                    <div style=\"font-size: 0.8em; color: #666; margin-top: 3px; white-space: normal; overflow: hidden; text-overflow: ellipsis;\">${exp.path}</div>`;
+                
+                expDiv.innerHTML = expHtml;
+                const cfgBtn = expDiv.querySelector('.view-config-btn');
+                if (cfgBtn) {
+                    cfgBtn.addEventListener('click', (e) => { e.stopPropagation(); showConfigBubbleForPath(exp.path); });
+                }
+                expDiv.onclick = () => loadExperiment(exp.path);
+                listDiv.appendChild(expDiv);
+            });
+        }
+
+        // Apply success filter without re-fetching
+        function applySuccessFilter() {
+            try {
+                const contents = {
+                    folders: window.currentFolders || [],
+                    experiments: window.currentExperiments || [],
+                    total_experiments: window.currentTotal || ((window.currentExperiments || []).length)
+                };
+                displayDirectoryContents(contents);
+            } catch (e) {
+                // fallback: reload
+                navigateToDirectory(currentDirectoryPath);
+            }
+        }
+
+        // Load data for a selected experiment and set up periodic updates
+        async function loadExperiment(experiment) {
+            try {
+                console.log(`🔍 loadExperiment called with: "${experiment}"`);
+                console.log(`🔍 Experiment contains special characters:`, {
+                    hasSpaces: experiment.includes(' '),
+                    hasBackslashes: experiment.includes('\\'),
+                    hasForwardSlashes: experiment.includes('/'),
+                    hasDashes: experiment.includes('-'),
+                    hasPercentSigns: experiment.includes('%')
+                });
+                
+                currentExperiment = experiment;
+                hideDetails();
+                if (updateInterval) clearInterval(updateInterval);
+
+                // Reset variables
+                allCoords = [];
+                currentPointsCount = 0;
+                totalDistance = 0;
+                lastTimestamp = null;
+                showingFullPath = false;
+                document.getElementById('show-full-path').innerText = 'Show Full Path';
+                decisionPoints = new Set(); // Reset decision points
+                document.getElementById('decision-points-count').innerText = '0'; // Reset UI count
+                
+                if (polyline) polyline.setMap(null);
+                if (carMarker) carMarker.setMap(null);
+                if (startMarker) startMarker.setMap(null); // Clear start marker
+                if (endMarker) endMarker.setMap(null);     // Clear end marker
+                if (destinationPolygon) destinationPolygon.setMap(null); // Clear destination polygon
+                pointMarkers.forEach(marker => {
+                    // Clean up all associated markers
+                    if (marker.glowMarker) marker.glowMarker.setMap(null);
+                    if (marker.selectedGlow) marker.selectedGlow.setMap(null);
+                    marker.setMap(null);
+                });
+                pointMarkers = [];
+                if (heatmap) {
+                    heatmap.setMap(null);
+                    heatmap = null;
+                }
+
+                // Load points.json for start/end markers
+                try {
+                    const pointsResponse = await fetch(`/${experiment}/points.json`);
+                    if (pointsResponse.ok) {
+                        const points = await pointsResponse.json();
+                        // Create start marker
+                        startMarker = new google.maps.Marker({
+                            position: new google.maps.LatLng(points.start.lat, points.start.lng),
+                            map: map,
+                            icon: {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 10,
+                                fillColor: '#00FF00',
+                                fillOpacity: 1,
+                                strokeWeight: 2,
+                                strokeColor: '#FFFFFF'
+                            },
+                            title: 'Start Point'
+                        });
+                        
+                        // Create end marker or polygon based on termination criteria
+                        if (points.termination_criteria === 'polygon' || points.termination_criteria === 'both') {
+                            // Draw destination polygon if available
+                            if (points.destinationPolygon && points.destinationPolygon.length > 0) {
+                                const polygonCoords = points.destinationPolygon.map(coord => ({
+                                    lat: coord[0],
+                                    lng: coord[1]
+                                }));
+
+                                destinationPolygon = new google.maps.Polygon({
+                                    paths: polygonCoords,
+                                    strokeColor: '#800080', // purple stroke
+                                    strokeOpacity: 0.9,
+                                    strokeWeight: 3,
+                                    fillColor: '#800080', // purple fill
+                                    fillOpacity: 0.2,
+                                    map: map
+                                });
+                            } else {
+                                // Fallback to end marker if no polygon data
+                                endMarker = new google.maps.Marker({
+                                    position: new google.maps.LatLng(points.end.lat, points.end.lng),
+                                    map: map,
+                                    icon: {
+                                        path: google.maps.SymbolPath.CIRCLE,
+                                        scale: 10,
+                                        fillColor: '#FF0000',
+                                        fillOpacity: 1,
+                                        strokeWeight: 2,
+                                        strokeColor: '#FFFFFF'
+                                    },
+                                    title: 'Destination (Polygon data not available)'
+                                });
+                            }
+                        } else {
+                            // Create end marker for distance-based termination
+                            endMarker = new google.maps.Marker({
+                                position: new google.maps.LatLng(points.end.lat, points.end.lng),
+                                map: map,
+                                icon: {
+                                    path: google.maps.SymbolPath.CIRCLE,
+                                    scale: 10,
+                                    fillColor: '#FF0000',
+                                    fillOpacity: 1,
+                                    strokeWeight: 2,
+                                    strokeColor: '#FFFFFF'
+                                },
+                                title: 'End Point'
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.log('No points.json found or error loading it:', error);
+                }
+
+                // Updated path handling - directly use the experiment folder  
+                console.log(`🔍 Loading files for experiment: ${experiment}`);
+                // For query parameters, we can encode the whole thing since it's a single parameter
+                const filesResponse = await fetch(`/files?exp=${encodeURIComponent(experiment)}`);
+                if (!filesResponse.ok) throw new Error(`Failed to load files for ${experiment}: ${filesResponse.status}`);
+                const files = await filesResponse.json();
+                if (files.length === 0) throw new Error(`No visited_coordinates file found in ${experiment}/`);
+
+                const visitedFile = files[0];
+                // Updated path to use experiment directory directly without 'logs/' prefix
+                // Properly encode each path segment separately
+                const pathSegments = experiment.split(/[\\\/]/).filter(Boolean);
+                const encodedSegments = pathSegments.map(segment => encodeURIComponent(segment));
+                const encodedPath = encodedSegments.join('/');
+                const fileUrl = `/${encodedPath}/${visitedFile}`;
+                console.log(`🔍 Original experiment: ${experiment}`);
+                console.log(`🔍 Path segments: ${JSON.stringify(pathSegments)}`);
+                console.log(`🔍 Loading coordinates from: ${fileUrl}`);
+
+                // Fetch initial coordinates with cache-busting
+                const response = await fetch(fileUrl + '?t=' + new Date().getTime());
+                if (!response.ok) throw new Error(`Failed to load ${fileUrl}: ${response.status}`);
+                const initialData = await response.json();
+                
+                const hasTimestamp = initialData.length > 0 && 'timestamp' in initialData[0];
+                allCoords = initialData.map((c, index) => ({ 
+                    lat: c.lat, 
+                    lng: c.lng,
+                    timestamp: hasTimestamp ? c.timestamp : null,
+                    index: index
+                }));
+
+                // Identify actual API call points by checking for API call files
+                console.log(`🔍 About to identify API call points for experiment: ${experiment}`);
+                console.log(`🔍 Experiment path contains spaces/special chars: ${experiment.includes(' ') || experiment.includes('-') || experiment.includes('_')}`);
+                await identifyDecisionPoints(experiment);
+                console.log(`📊 API call points identified: ${decisionPoints.size} total`, Array.from(decisionPoints).sort((a,b) => a-b));
+                
+                if (decisionPoints.size === 0) {
+                    console.warn(`⚠️ NO API CALL POINTS FOUND! This might indicate URL encoding issues.`);
+                    console.warn(`⚠️ Check the server logs for DEBUG messages about directory access.`);
+                }
+
+                if (allCoords.length > 0) {
+                    map.panTo(new google.maps.LatLng(allCoords[0].lat, allCoords[0].lng));
+                    map.setZoom(18);
+                }
+
+                const displayedPath = allCoords.slice(-trailLength).map(coord => 
+                    new google.maps.LatLng(coord.lat, coord.lng)
+                );
+                
+                polyline = new google.maps.Polyline({
+                    path: displayedPath,
+                    geodesic: true,
+                    strokeColor: '#2196F3', // Changed to blue to be less prominent than gold decision points
+                    strokeOpacity: 0.8, // Slightly transparent
+                    strokeWeight: 3, // Slightly thinner
+                    icons: [{
+                        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 2, strokeColor: '#FFFFFF' },
+                        repeat: '60px' // Less frequent markers
+                    }]
+                });
+                polyline.setMap(map);
+                
+                updatePointMarkers();
+
+                // Create car marker with enhanced visibility
+                if (allCoords.length > 0) {
+                    const lastPoint = allCoords[allCoords.length - 1];
+                    let heading = 0;
+                    if (allCoords.length > 1) {
+                        const prevPoint = allCoords[allCoords.length - 2];
+                        // Check if geometry library is available
+                        if (google.maps.geometry && google.maps.geometry.spherical) {
+                            heading = google.maps.geometry.spherical.computeHeading(
+                                new google.maps.LatLng(prevPoint.lat, prevPoint.lng),
+                                new google.maps.LatLng(lastPoint.lat, lastPoint.lng)
+                            );
+                            
+                            // Ensure heading is valid
+                            if (isNaN(heading)) heading = 0;
+                        } else {
+                            console.warn('Google Maps geometry library not loaded, using default heading');
+                            heading = 0;
+                        }
+                    }
+                    carMarker = new google.maps.Marker({
+                        position: new google.maps.LatLng(lastPoint.lat, lastPoint.lng),
+                        map: map,
+                        icon: {
+                            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                            scale: 8, // Increased size
+                            fillColor: '#FF0000', // Red for visibility
+                            fillOpacity: 1,
+                            strokeWeight: 2,
+                            strokeColor: '#FFFFFF',
+                            rotation: heading
+                        },
+                        zIndex: 200 // Higher to ensure visibility
+                    });
+                    console.log('Car marker created at:', lastPoint, 'with heading:', heading);
+                    map.panTo(new google.maps.LatLng(lastPoint.lat, lastPoint.lng)); // Ensure initial visibility
+                }
+
+                document.getElementById('points-count').innerText = allCoords.length;
+                if (allCoords.length > 1) {
+                    for (let i = 1; i < allCoords.length; i++) {
+                        totalDistance += calculateDistance(allCoords[i-1], allCoords[i]);
+                    }
+                    document.getElementById('total-distance').innerText = `${totalDistance.toFixed(2)} km`;
+                }
+                currentPointsCount = allCoords.length;
+
+                // Periodic updates with cache-busting
+                updateInterval = setInterval(async () => {
+                    try {
+                        console.log('Checking for updates...');
+                        const response = await fetch(fileUrl + '?t=' + new Date().getTime());
+                        if (!response.ok) throw new Error(`Failed to load ${fileUrl}: ${response.status}`);
+                        const newData = await response.json();
+                        
+                        console.log('Current points count:', currentPointsCount, 'New data length:', newData.length);
+                        const hasTimestamp = newData.length > 0 && 'timestamp' in newData[0];
+                        
+                        if (newData.length > currentPointsCount) {
+                            const newPoints = newData.slice(currentPointsCount);
+                            newPoints.forEach((point, idx) => {
+                                const newPoint = {
+                                    lat: point.lat, 
+                                    lng: point.lng,
+                                    timestamp: hasTimestamp ? point.timestamp : null,
+                                    index: currentPointsCount + idx
+                                };
+                                allCoords.push(newPoint);
+                                updateMetrics(newPoint, newPoint.timestamp);
+                                if (showingFullPath || allCoords.length <= trailLength) {
+                                    addPointMarker(newPoint, newPoint.index);
+                                }
+                            });
+                            
+                            updatePolyline();
+                            if (!showingFullPath && allCoords.length > trailLength) updatePointMarkers();
+                            if (showingHeatmap) updateHeatmap();
+                            
+                            if (allCoords.length > 1) {
+                                const lastPoint = allCoords[allCoords.length - 1];
+                                const prevPoint = allCoords[allCoords.length - 2];
+                                
+                                // Improved heading calculation for better arrow direction
+                                let heading = 0;
+                                if (google.maps.geometry && google.maps.geometry.spherical) {
+                                    heading = google.maps.geometry.spherical.computeHeading(
+                                        new google.maps.LatLng(prevPoint.lat, prevPoint.lng),
+                                        new google.maps.LatLng(lastPoint.lat, lastPoint.lng)
+                                    );
+                                    
+                                    // Ensure heading is valid (not NaN)
+                                    if (isNaN(heading)) heading = 0;
+                                } else {
+                                    console.warn('Google Maps geometry library not loaded, using default heading');
+                                    heading = 0;
+                                }
+                                
+                                if (carMarker) {
+                                    carMarker.setPosition(new google.maps.LatLng(lastPoint.lat, lastPoint.lng));
+                                    carMarker.setIcon({
+                                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                                        scale: 8,
+                                        fillColor: '#FF0000',
+                                        fillOpacity: 1,
+                                        strokeWeight: 2,
+                                        strokeColor: '#FFFFFF',
+                                        rotation: heading
+                                    });
+                                    console.log('Car marker updated to:', lastPoint, 'with heading:', heading);
+                                    if (followCar) map.panTo(new google.maps.LatLng(lastPoint.lat, lastPoint.lng));
+                                } else {
+                                    // Create car marker if it doesn't exist
+                                    carMarker = new google.maps.Marker({
+                                        position: new google.maps.LatLng(lastPoint.lat, lastPoint.lng),
+                                        map: map,
+                                        icon: {
+                                            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                                            scale: 8,
+                                            fillColor: '#FF0000',
+                                            fillOpacity: 1,
+                                            strokeWeight: 2,
+                                            strokeColor: '#FFFFFF',
+                                            rotation: heading
+                                        },
+                                        zIndex: 200
+                                    });
+                                    console.log('Car marker created at:', lastPoint);
+                                    if (followCar) map.panTo(new google.maps.LatLng(lastPoint.lat, lastPoint.lng));
+                                }
+                            }
+                            
+                            currentPointsCount = newData.length;
+                            document.getElementById('points-count').innerText = currentPointsCount;
+                        }
+                    } catch (error) {
+                        console.error('Error updating polyline:', error);
+                    }
+                }, 1000);
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Identify call points by checking for the existence of API call files
+        async function identifyDecisionPoints(experiment) {
+            console.log("Identifying API call points...");
+            decisionPoints.clear();
+            
+            // Helper function to extract point index from call files only
+            function extractPointIndex(filename) {
+                // Handle patterns: call_X.json, self_position_XXXX.json (NO decision_X.json)
+                let match;
+                if (filename.startsWith('call_')) {
+                    match = filename.match(/call_(\d+)\.json$/);
+                    if (match) {
+                        const pointIndex = parseInt(match[1], 10);
+                        console.log(`  → Found call file: ${filename} → point ${pointIndex}`);
+                        return pointIndex;
+                    }
+                } else if (filename.startsWith('self_position_')) {
+                    match = filename.match(/self_position_(\d+)\.json$/);
+                    if (match) {
+                        const pointIndex = parseInt(match[1], 10);
+                        console.log(`  → Found self-position file: ${filename} → point ${pointIndex}`);
+                        return pointIndex;
+                    }
+                }
+                return null;
+            }
+            
+            // Properly encode each path segment separately
+            const pathSegments = experiment.split(/[\\\/]/).filter(Boolean);
+            const encodedSegments = pathSegments.map(segment => encodeURIComponent(segment));
+            const encodedPath = encodedSegments.join('/');
+            
+            // Get a list of all available API call files
+            try {
+                // Try to fetch a list of OpenAI call files
+                console.log(`🔍 Fetching OpenAI files from: /${experiment}/openai_calls/`);
+                console.log(`🔍 URL encoded path: ${encodedPath}`);
+                const openaiResponse = await fetch(`/${encodedPath}/openai_calls/`);
+                if (openaiResponse.ok) {
+                    const openaiFiles = await openaiResponse.json();
+                    console.log(`✅ OpenAI response OK, found ${openaiFiles.length} files`);
+                    openaiFiles.forEach(file => {
+                        const pointIndex = extractPointIndex(file);
+                        if (pointIndex !== null) {
+                            decisionPoints.add(pointIndex);
+                            console.log(`Found OpenAI decision point: ${pointIndex} (${file})`);
+                        }
+                    });
+                } else {
+                    console.log(`❌ OpenAI response failed: ${openaiResponse.status} ${openaiResponse.statusText}`);
+                }
+            } catch (error) {
+                console.log("Error fetching OpenAI call files:", error);
+            }
+            
+            try {
+                // Try to fetch a list of Gemini call files
+                console.log(`🔍 Fetching Gemini files from: /${experiment}/gemini_calls/`);
+                const geminiResponse = await fetch(`/${encodedPath}/gemini_calls/`);
+                if (geminiResponse.ok) {
+                    const geminiFiles = await geminiResponse.json();
+                    console.log(`✅ Gemini response OK, found ${geminiFiles.length} files`);
+                    geminiFiles.forEach(file => {
+                        const pointIndex = extractPointIndex(file);
+                        if (pointIndex !== null) {
+                            decisionPoints.add(pointIndex);
+                            console.log(`Found Gemini decision point: ${pointIndex} (${file})`);
+                        }
+                    });
+                } else {
+                    console.log(`❌ Gemini response failed: ${geminiResponse.status} ${geminiResponse.statusText}`);
+                }
+            } catch (error) {
+                console.log("Error fetching Gemini call files:", error);
+            }
+
+            // Try to fetch a list of self-positioning call files
+            try {
+                console.log(`🔍 Fetching self-position files from: /${experiment}/self_position_calls/`);
+                const selfPosResp = await fetch(`/${encodedPath}/self_position_calls/`);
+                if (selfPosResp.ok) {
+                    const spFiles = await selfPosResp.json();
+                    console.log(`✅ Self-position response OK, found ${spFiles.length} files`);
+                    spFiles.forEach(file => {
+                        const pointIndex = extractPointIndex(file);
+                        if (pointIndex !== null) {
+                            decisionPoints.add(pointIndex);
+                            console.log(`Found self-position decision point: ${pointIndex} (${file})`);
+                        }
+                    });
+                } else {
+                    console.log(`❌ Self-position response failed: ${selfPosResp.status} ${selfPosResp.statusText}`);
+                }
+            } catch (error) {
+                console.log("Error fetching self-positioning call files:", error);
+            }
+            
+            // If we couldn't get a directory listing, try checking individual files
+            if (decisionPoints.size === 0) {
+                console.log("Falling back to checking individual files...");
+                // Check for API call files for each point
+                const checkPromises = [];
+                for (let i = 0; i < allCoords.length; i++) {
+                    if (i % 10 === 0) { // Check every 10th point to avoid too many requests
+                        checkPromises.push(checkApiCallExists(experiment, i));
+                    }
+                }
+                await Promise.all(checkPromises);
+            }
+            
+            const sortedPoints = Array.from(decisionPoints).sort((a, b) => a - b);
+            console.log(`✓ SUMMARY: Identified ${decisionPoints.size} API call points:`, sortedPoints);
+            console.log(`API call points only support call_X.json file format`);
+            
+            // Update the UI with decision points count
+            document.getElementById('decision-points-count').innerText = decisionPoints.size;
+        }
+        
+        // Check if an API call file exists for a specific point
+        async function checkApiCallExists(experiment, pointIndex) {
+            try {
+                // Properly encode each path segment separately
+                const pathSegments = experiment.split(/[\\\/]/).filter(Boolean);
+                const encodedSegments = pathSegments.map(segment => encodeURIComponent(segment));
+                const encodedPath = encodedSegments.join('/');
+                console.log(`🔍 Fallback check for experiment: ${experiment} → encoded: ${encodedPath}`);
+                
+                // Define possible file naming patterns (call files only)
+                const patterns = [
+                    `/${encodedPath}/openai_calls/call_${pointIndex}.json`,
+                    `/${encodedPath}/gemini_calls/call_${pointIndex}.json`,
+                    `/${encodedPath}/self_position_calls/self_position_${pointIndex.toString().padStart(4,'0')}.json`
+                ];
+
+                // Try each pattern
+                for (const pattern of patterns) {
+                    try {
+                        const response = await fetch(pattern, { method: 'HEAD' });
+                        if (response.ok) {
+                            decisionPoints.add(pointIndex);
+                            console.log(`Found decision point ${pointIndex} via fallback method: ${pattern}`);
+                            return;
+                        }
+                    } catch (error) {
+                        // Ignore errors, just means the file doesn't exist
+                    }
+                }
+            } catch (error) {
+                // Ignore errors, just means the file doesn't exist
+            }
+        }
+
+        // Fallback timeout for Google Maps API
+        let mapsApiTimeout = setTimeout(() => {
+            if (typeof google === 'undefined' || !google.maps) {
+                console.error('Google Maps API loading timeout');
+                alert('Google Maps API is taking too long to load. Please check your internet connection and try refreshing the page.');
+            }
+        }, 10000); // 10 second timeout
+
+        window.onload = function() {
+            // Clear the timeout if page loads successfully
+            clearTimeout(mapsApiTimeout);
+            
+            // First load the experiments
+            listExperiments();
+        }
+
+        // Debug function to check directory structure
+        async function debugDirectories() {
+            try {
+                console.log('🔍 Fetching debug directory information...');
+                const response = await fetch('/debug-dirs');
+                if (response.ok) {
+                    const debugInfo = await response.json();
+                    console.log('📁 Available directories:', debugInfo);
+                    
+                    // Also try to get current directory contents
+                    const currentResponse = await fetch(`/directory-contents?dir=${encodeURIComponent(currentDirectoryPath)}`);
+                    if (currentResponse.ok) {
+                        const currentContents = await currentResponse.json();
+                        console.log('📂 Current directory contents:', currentContents);
+                    }
+                    
+                    alert('Debug information logged to console. Open developer tools to see details.');
+                } else {
+                    console.error('Failed to fetch debug info:', response.status);
+                    alert('Failed to fetch debug information. Check console for details.');
+                }
+            } catch (error) {
+                console.error('Debug error:', error);
+                alert('Debug error: ' + error.message);
+            }
+        }
+
+        // Toggle the size of response data section
+        function toggleResponseSize(event) {
+            event.preventDefault();
+            const responseDiv = event.target.previousElementSibling;
+            responseDiv.classList.toggle('expanded');
+            
+            // Check if this is a decision-data or cot-data div
+            const isDecisionData = responseDiv.classList.contains('decision-data');
+            const isCotData = responseDiv.classList.contains('cot-data');
+            
+            // Get the details container
+            const detailsDiv = document.getElementById('details');
+            
+            if (responseDiv.classList.contains('expanded')) {
+                // Save original position to restore later
+                detailsDiv.setAttribute('data-original-top', detailsDiv.style.top);
+                detailsDiv.setAttribute('data-original-right', detailsDiv.style.right);
+                detailsDiv.setAttribute('data-original-width', detailsDiv.style.width);
+                detailsDiv.setAttribute('data-original-height', detailsDiv.style.maxHeight);
+                
+                // Make it MUCH bigger
+                detailsDiv.style.top = '50px';
+                detailsDiv.style.right = '50px';
+                detailsDiv.style.width = '80%';
+                detailsDiv.style.maxHeight = '80vh';
+                detailsDiv.style.zIndex = '3000';
+                
+                // Also make font larger for better readability
+                responseDiv.style.fontSize = '14px';
+            } else {
+                // Restore original position
+                detailsDiv.style.top = detailsDiv.getAttribute('data-original-top') || '70px';
+                detailsDiv.style.right = detailsDiv.getAttribute('data-original-right') || '20px';
+                detailsDiv.style.width = detailsDiv.getAttribute('data-original-width') || '400px';
+                detailsDiv.style.maxHeight = detailsDiv.getAttribute('data-original-height') || '70vh';
+                detailsDiv.style.zIndex = '1000';
+                
+                // Reset font size
+                responseDiv.style.fontSize = '12px';
+            }
+            
+            return false;
+        }
+
+        // Show config.yml or config.yaml (including config_<run_id>.yml) for a given folder/experiment path in a bubble
+        async function showConfigBubbleForPath(path) {
+            try {
+                const bubble = document.getElementById('config-bubble');
+                const pre = document.getElementById('config-bubble-content');
+                const title = document.getElementById('config-bubble-title');
+                const rawLink = document.getElementById('config-bubble-raw');
+                if (!bubble || !pre || !title || !rawLink) return;
+
+                title.textContent = `Run Config — ${path.split(/[\\\/]/).pop()}`;
+                pre.textContent = 'Loading...';
+                bubble.style.display = 'block';
+
+                const encoded = path.split(/[\\\/]/).filter(Boolean).map(encodeURIComponent).join('/');
+                // Try standard names, then attempt to derive run id for config_<id>.yml
+                const parts = path.replace(/\\/g, '/').split('/').filter(Boolean);
+                // Heuristic: find a segment matching \d{5}_path_\d{2}_r\d+
+                let runId = null;
+                for (const seg of parts) {
+                    const m = seg.match(/\b\d{5}_path_\d{2}_r\d+\b/);
+                    if (m) { runId = m[0]; break; }
+                }
+                const candidates = [`/${encoded}/config.yml`, `/${encoded}/config.yaml`]
+                    .concat(runId ? [`/${encoded}/config_${runId}.yml`, `/${encoded}/config_${runId}.yaml`] : []);
+
+                let content = null;
+                let usedUrl = null;
+                for (const url of candidates) {
+                    try {
+                        const resp = await fetch(url + '?t=' + Date.now());
+                        if (resp.ok) {
+                            content = await resp.text();
+                            usedUrl = url;
+                            break;
+                        }
+                    } catch (_) {}
+                }
+
+                if (content === null) {
+                    pre.textContent = 'config.yml not found in this folder.';
+                    rawLink.href = '#';
+                    rawLink.style.display = 'none';
+                    return;
+                }
+
+                rawLink.href = usedUrl;
+                rawLink.style.display = 'inline';
+                pre.textContent = content;
+            } catch (e) {
+                const pre = document.getElementById('config-bubble-content');
+                if (pre) pre.textContent = 'Error loading config: ' + (e && e.message ? e.message : e);
+            }
+        }
+
+        // Load and visualize a meta-run folder with all branches
+        async function loadMeta(metaPath) {
+            // Store the path to later use for zooming
+            const currentMetaPath = metaPath;
+            
+            // Clear any existing update interval or popups
+            hideDetails();
+            if (updateInterval) clearInterval(updateInterval);
+            // Clear any current experiment overlays
+            pointMarkers.forEach(m => m.setMap(null));
+            pointMarkers = [];
+            if (polyline) polyline.setMap(null);
+            // Clear heatmap and carMarker
+            if (heatmap) heatmap.setMap(null);
+            if (carMarker) carMarker.setMap(null);
+            // Clear meta polylines
+            metaPolylines.forEach(pl => pl.setMap(null)); metaPolylines = [];
+            metaMarkers.forEach(m => m.setMap(null)); metaMarkers = [];
+
+            // Ensure Maps API is loaded
+            if (typeof google === 'undefined' || typeof google.maps === 'undefined' || typeof google.maps.LatLngBounds === 'undefined') {
+                console.error("Google Maps API not fully loaded.");
+                alert("Error: Google Maps API did not load correctly. Please check your connection and ad blockers, then refresh.");
+                return; // Stop execution if API isn't ready
+            }
+
+            // Fetch list of experiment paths under this meta-run
+            const resp = await fetch(`/experiments?dir=${encodeURIComponent(metaPath)}`);
+            let exps = await resp.json();
+            // Normalize metaPath to forward slashes for relative extraction
+            const metaPathNorm = metaPath.replace(/\\/g, '/');
+            // Sort so that the initial run folder 'Run_Depth0_Initial' appears first
+            exps.sort((a, b) => {
+                // Compare based on the folder name (last segment of the path)
+                const aLeaf = a.replace(/\\/g, '/').split('/').pop();
+                const bLeaf = b.replace(/\\/g, '/').split('/').pop();
+                if (aLeaf === 'Run_Depth0_Initial' && bLeaf !== 'Run_Depth0_Initial') return -1;
+                if (bLeaf === 'Run_Depth0_Initial' && aLeaf !== 'Run_Depth0_Initial') return 1;
+                return 0;
+            });
+            // Reset branch information
+            metaBranches = [];
+            branchHierarchy = {};
+            
+            // Create bounds object for zooming
+            const bounds = new google.maps.LatLngBounds();
+            console.log("Created new bounds object:", bounds);
+
+            // For each experiment, plot its path and decision points
+            for (let i = 0; i < exps.length; i++) {
+                const exp = exps[i];
+                // Normalize Windows backslashes to forward slashes for URL construction
+                const expUrl = exp.replace(/\\/g, '/');
+                
+                // Extract branch folder name from the path (last segment)
+                const branchFolderName = expUrl.replace(/\\/g, '/').split('/').pop();
+                
+                // Initialize branch data, identifying main solely by i===0
+                const branchData = {
+                    index: i,
+                    name: branchFolderName,
+                    displayName: branchFolderName,
+                    path: exp,
+                    color: branchColors[i % branchColors.length],
+                    isMain: branchFolderName === 'Run_Depth0_Initial',
+                    visible: true,
+                    polylines: [],
+                    markers: []
+                };
+                
+                // Fetch visited coordinates file list
+                const filesResp = await fetch(`/files?exp=${encodeURIComponent(expUrl)}`);
+                if (!filesResp.ok) continue;
+                const files = await filesResp.json();
+                if (files.length === 0) continue;
+                const visitedFile = files[0];
+                // Fetch coordinates
+                const coordsResp = await fetch(`/${expUrl}/${visitedFile}?t=${Date.now()}`);
+                if (!coordsResp.ok) continue;
+                const coords = await coordsResp.json();
+                // Determine branch start index based on branch folder name (e.g., Step42)
+                let startIndex = 0;
+                if (!branchData.isMain) {
+                    const match = branchFolderName.match(/Step(\d+)/);
+                    startIndex = match ? parseInt(match[1], 10) : 0;
+                }
+                branchData.startIndex = startIndex;
+                // Slice coordinates so branch draws only from checkpoint onward
+                const branchCoords = coords.slice(startIndex);
+                // Build polyline path for this branch
+                const path = branchCoords.map(c => new google.maps.LatLng(c.lat, c.lng));
+                // Add each point to bounds for auto-zoom
+                path.forEach(point => {
+                    try {
+                        // Check bounds object exists before extending
+                        if (bounds) {
+                            bounds.extend(point);
+                        } else {
+                            console.warn("Bounds object is not defined when trying to extend.");
+                        }
+                    } catch (e) {
+                        console.error("Error extending bounds with point:", point, e);
+                    }
+                });
+                console.log(`Added ${path.length} points to bounds from ${branchData.name}`);
+                
+                // Enhanced styling
+                const baseColor = branchColors[i % branchColors.length];
+                const isMainBranch = branchData.isMain;
+                
+                // Create glow effect with multiple polylines
+                if (isMainBranch) {
+                    // Wider glow background for main branch
+                    const glowLine = new google.maps.Polyline({
+                        path: path,
+                        geodesic: true,
+                        strokeColor: '#FFFFFF',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 14,
+                        zIndex: 1
+                    });
+                    glowLine.setMap(map);
+                    metaPolylines.push(glowLine);
+                    branchData.polylines.push(glowLine);
+                }
+                
+                // Direction arrows - more frequent for better visibility
+                const arrowSymbol = {
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    scale: isMainBranch ? 7 : 5,
+                    fillColor: isMainBranch ? '#FFFFFF' : baseColor,
+                    fillOpacity: 1,
+                    strokeWeight: isMainBranch ? 2 : 1,
+                    strokeColor: isMainBranch ? '#000000' : '#FFFFFF'
+                };
+                
+                // Arrow animation for ALL branches (not just main)
+                const dashedLine = new google.maps.Polyline({
+                    path: path,
+                    geodesic: true,
+                    strokeColor: 'transparent', // Invisible line, just show arrows
+                    strokeOpacity: 0,
+                    strokeWeight: 1,
+                    icons: [{
+                        icon: arrowSymbol,
+                        offset: '0%',
+                        repeat: isMainBranch ? '100px' : '150px'
+                    }],
+                    zIndex: 4 // Always on top
+                });
+                dashedLine.setMap(map);
+                metaPolylines.push(dashedLine);
+                branchData.polylines.push(dashedLine);
+                
+                // Setup animation for all branches
+                if (!window.arrowAnimIntervals) {
+                    window.arrowAnimIntervals = [];
+                }
+                
+                // Clear any existing animation
+                if (window.arrowAnimIntervals[i]) {
+                    clearInterval(window.arrowAnimIntervals[i]);
+                }
+                
+                // Create new animation interval
+                const animInterval = setInterval(() => {
+                    // Each branch has slightly different speed based on its index
+                    const speed = isMainBranch ? 1 : 0.5 + (i % 5) * 0.1;
+                    const offset = (Date.now() / 100 * speed) % 100;
+                    const icons = dashedLine.get('icons');
+                    icons[0].offset = offset + '%';
+                    dashedLine.set('icons', icons);
+                }, 50);
+                
+                window.arrowAnimIntervals[i] = animInterval;
+                
+                // Main colored line
+                const pl = new google.maps.Polyline({
+                    path: path,
+                    geodesic: true,
+                    strokeColor: isMainBranch ? '#FF4500' : baseColor,
+                    strokeOpacity: 1.0,
+                    strokeWeight: isMainBranch ? 9 : 5,
+                    zIndex: 2,
+                    icons: [{
+                        icon: arrowSymbol,
+                        offset: '100%',
+                        repeat: isMainBranch ? '200px' : '150px'
+                    }]
+                });
+                pl.setMap(map);
+                metaPolylines.push(pl);
+                branchData.polylines.push(pl);
+                
+                // Add other polylines to branch data
+                if (isMainBranch && metaPolylines.length >= 3) {
+                    // Add the glow line and animated dashed line that we created earlier for main branch
+                    branchData.polylines.push(metaPolylines[metaPolylines.length - 2]); // dashedLine
+                    branchData.polylines.push(metaPolylines[metaPolylines.length - 3]); // glowLine
+                }
+                
+                // Start/end markers for main branch
+                if (branchData.isMain && path.length > 0) {
+                    // Enhanced start marker with pulse effect
+                    mainStartMarker = new google.maps.Marker({
+                        position: path[0],
+                        map: map,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 12,
+                            fillColor: '#00FF00',
+                            fillOpacity: 1,
+                            strokeWeight: 3,
+                            strokeColor: '#FFFFFF'
+                        },
+                        zIndex: 10,
+                        animation: google.maps.Animation.BOUNCE,
+                        title: 'START'
+                    });
+                    
+                    // Enhanced end marker
+                    mainEndMarker = new google.maps.Marker({
+                        position: path[path.length - 1],
+                        map: map,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 12,
+                            fillColor: '#FF0000',
+                            fillOpacity: 1,
+                            strokeWeight: 3,
+                            strokeColor: '#FFFFFF'
+                        },
+                        zIndex: 10,
+                        animation: google.maps.Animation.BOUNCE,
+                        title: 'END'
+                    });
+                    
+                    // Stop bouncing after 3 seconds
+                    setTimeout(() => {
+                        mainStartMarker.setAnimation(null);
+                        mainEndMarker.setAnimation(null);
+                    }, 3000);
+                    
+                    // Add markers to branch data
+                    branchData.markers.push(mainStartMarker);
+                    branchData.markers.push(mainEndMarker);
+                }
+                // Decision point markers: highlight points with API call logs
+                for (let callType of ['openai_calls','gemini_calls','self_position_calls']) {
+                    try {
+                        const dirResp = await fetch(`/${expUrl}/${callType}/`);
+                        if (!dirResp.ok) continue;
+                        const files = await dirResp.json();
+                        files.forEach(f => {
+                            const decMatch = f.match(/(?:call|decision)_(\d+)\.json/);
+                            if (decMatch) {
+                                const origIdx = parseInt(decMatch[1], 10);
+                                // Compute index within the sliced path
+                                const relIdx = origIdx - startIndex;
+                                if (relIdx >= 0 && relIdx < path.length) {
+                                    // Enhanced decision point markers
+                                    const dpMarker = new google.maps.Marker({
+                                        position: path[relIdx],
+                                        map: map,
+                                        icon: {
+                                            path: google.maps.SymbolPath.CIRCLE,
+                                            scale: 8,
+                                            fillColor: isMainBranch ? '#FFFF00' : baseColor,
+                                            fillOpacity: 0.9,
+                                            strokeColor: '#000000',
+                                            strokeWeight: 2
+                                        },
+                                        zIndex: 5
+                                    });
+                                    dpMarker.addListener('click', () => loadDecisionData(exp, callType, f, origIdx));
+                                    metaMarkers.push(dpMarker);
+                                    branchData.markers.push(dpMarker);
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+                
+                // Add branch to collection
+                metaBranches.push(branchData);
+            }
+            // After all branches are loaded, analyze paths to determine parent-child relationships
+            metaBranches.forEach(branch => {
+                if (branch.isMain) return;
+                const branchPathNorm = branch.path.replace(/\\/g, '/');
+                let bestParent = null;
+                let bestLength = 0;
+                metaBranches.forEach(potentialParent => {
+                    if (potentialParent.index === branch.index) return;
+                    const parentNorm = potentialParent.path.replace(/\\/g, '/');
+                    const prefix = parentNorm + '/';
+                    if (branchPathNorm.startsWith(prefix) && parentNorm.length > bestLength) {
+                        bestParent = potentialParent;
+                        bestLength = parentNorm.length;
+                    }
+                });
+                if (bestParent) {
+                    branch.parentIndex = bestParent.index;
+                    if (!branchHierarchy[bestParent.index]) branchHierarchy[bestParent.index] = [];
+                    branchHierarchy[bestParent.index].push(branch.index);
+                }
+            });
+            
+            // Auto-zoom to fit all points
+            if (bounds && !bounds.isEmpty()) {
+                // Use different padding based on screen size
+                const width = window.innerWidth;
+                const padding = {
+                    top: 80,
+                    right: 80,
+                    bottom: 80,
+                    left: Math.min(width * 0.3, 350) // Account for sidebar
+                };
+                
+                console.log("Fitting bounds:", bounds);
+                map.fitBounds(bounds, padding);
+                
+                // Limit maximum zoom level to keep context
+                const listener = google.maps.event.addListener(map, 'idle', function() {
+                    if (map.getZoom() > 16) map.setZoom(16);
+                    google.maps.event.removeListener(listener);
+                });
+            } else {
+                console.warn("Bounds object is empty! Cannot auto-zoom.");
+                // Try to zoom to a reasonable default view
+                if (metaBranches.length > 0 && metaBranches[0].polylines.length > 0) {
+                    const firstBranch = metaBranches[0];
+                    const firstLine = firstBranch.polylines[0];
+                    const path = firstLine.getPath();
+                    if (path && path.getLength() > 0) {
+                        map.setCenter(path.getAt(0));
+                        map.setZoom(15);
+                    }
+                }
+            }
+            
+            // Populate branch toggles sidebar
+            populateBranchToggles();
+            
+            // Show the branches toggle button
+            document.getElementById('toggle-branches-btn').style.display = 'block';
+            
+            // Clean up old animation intervals when starting a new view
+            window.addEventListener('beforeunload', () => {
+                if (window.arrowAnimIntervals) {
+                    window.arrowAnimIntervals.forEach(interval => {
+                        clearInterval(interval);
+                    });
+                }
+            });
+            
+            // Fallback: attach any unassigned branch under the main branch
+            const mainBr = metaBranches.find(b => b.isMain);
+            if (mainBr) {
+                const mainIdx = mainBr.index;
+                branchHierarchy[mainIdx] = branchHierarchy[mainIdx] || [];
+                metaBranches.forEach(b => {
+                    if (!b.isMain && b.parentIndex === undefined) {
+                        b.parentIndex = mainIdx;
+                        branchHierarchy[mainIdx].push(b.index);
+                    }
+                });
+            }
+        }
+
+        // Fetch and display decision data when clicking on a decision point marker
+        async function loadDecisionData(exp, callType, filename, idx) {
+            // Show details panel
+            const detailsDiv = document.getElementById('details');
+            detailsDiv.style.display = 'block';
+            const contentDiv = document.getElementById('decision-content');
+            const pointNumSpan = document.getElementById('decision-point-number');
+            pointNumSpan.innerText = idx;
+            let data = null;
+            let cot = null;
+            try {
+                const resp = await fetch(`/${exp}/${callType}/${filename}`);
+                if (resp.ok) data = await resp.json();
+            } catch (err) {
+                console.error('Error fetching decision JSON:', err);
+            }
+            // Try loading chain-of-thought file
+            const cotFilename = filename.replace(/^decision_/, 'cot_').replace(/^call_/, 'cot_').replace(/\.json$/, '.txt');
+            try {
+                const r = await fetch(`/${exp}/${callType}/${cotFilename}`);
+                if (r.ok) cot = await r.text();
+            } catch (err) {
+                // no COT
+            }
+            // Use existing renderer
+            showDecisionDetailsAggregated(idx, [{ source: callType, data, cot }]);
+        }
+
+        // Clear all branch animations
+        function clearAllAnimations() {
+            if (window.arrowAnimIntervals) {
+                window.arrowAnimIntervals.forEach(interval => clearInterval(interval));
+                window.arrowAnimIntervals = [];
+            }
+        }
+
+        // Toggle branch sidebar visibility
+        function toggleBranchSidebar() {
+            const toggles = document.getElementById('branch-toggles');
+            if (toggles.style.display === 'none' || !toggles.style.display) {
+                toggles.style.display = 'block';
+                document.getElementById('toggle-branches-btn').textContent = 'Hide Branches';
+            } else {
+                toggles.style.display = 'none';
+                document.getElementById('toggle-branches-btn').textContent = 'Branch Controls';
+                // Hide the toggles and reset any styles
+                clearAllAnimations();
+            }
+        }
+        
+        // Close branch sidebar
+        function closeBranchSidebar() {
+            document.getElementById('branch-toggles').style.display = 'none';
+            document.getElementById('toggle-branches-btn').textContent = 'Branch Controls';
+        }
+        
+        // Toggle visibility of a branch
+        function toggleBranchVisibility(branchIndex, state) {
+            const branch = metaBranches[branchIndex];
+            if (typeof state === 'boolean') {
+                branch.visible = state;
+            } else {
+                branch.visible = !branch.visible;
+            }
+            
+            // Update checkbox state
+            document.getElementById(`branch-checkbox-${branchIndex}`).checked = branch.visible;
+            
+            // Toggle polyline and marker layers
+            branch.polylines.forEach(pl => pl.setMap(branch.visible ? map : null));
+            branch.markers.forEach(m => m.setMap(branch.visible ? map : null));
+        }
+
+        // Populate branch toggles sidebar: hierarchical list with proper indentation
+        function populateBranchToggles() {
+            const container = document.getElementById('branch-toggles-content');
+            container.innerHTML = '';
+
+            // Show All / Hide All controls
+            const ctrl = document.createElement('div');
+            ctrl.className = 'branch-item';
+            ['Show All', 'Hide All'].forEach(txt => {
+                const btn = document.createElement('button');
+                btn.textContent = txt;
+                btn.style.margin = '0 5px';
+                btn.onclick = e => {
+                    e.stopPropagation();
+                    metaBranches.forEach((b, idx) => toggleBranchVisibility(idx, txt === 'Show All'));
+                };
+                ctrl.appendChild(btn);
+            });
+            container.appendChild(ctrl);
+
+            // Recursive renderer to display branches in tree order
+            function renderBranch(idx, level) {
+                const b = metaBranches[idx];
+                const item = document.createElement('div');
+                item.className = 'branch-item';
+                if (b.isMain) {
+                    item.style.borderColor = '#FF4500';
+                    item.style.backgroundColor = 'rgba(255,69,0,0.1)';
+                }
+
+                // Color dot
+                const dot = document.createElement('div');
+                dot.className = 'branch-color';
+                dot.style.backgroundColor = b.isMain ? '#FF4500' : b.color;
+                item.appendChild(dot);
+
+                // Name label and hierarchical indent via padding
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'branch-name';
+                nameDiv.style.paddingLeft = (level * 20) + 'px';
+                const label = b.displayName + (b.isMain ? ' (main)' : '');
+                nameDiv.textContent = label;
+                item.appendChild(nameDiv);
+
+                // Checkbox toggle
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'branch-toggle';
+                cb.id = `branch-checkbox-${idx}`;
+                cb.checked = b.visible;
+                cb.onclick = e => { e.stopPropagation(); toggleBranchVisibility(idx, cb.checked); };
+                item.appendChild(cb);
+
+                container.appendChild(item);
+
+                // Render any child branches
+                const kids = branchHierarchy[idx] || [];
+                kids.forEach(childIdx => renderBranch(childIdx, level + 1));
+            }
+
+            // Render root-level branches (branches with no parent)
+            metaBranches.forEach(b => {
+                if (b.parentIndex === undefined) renderBranch(b.index, 0);
+            });
+        }
+
+        // Deep Analysis JS
+        async function runDeepAnalysis(dir) {
+            const statusEl = document.getElementById('deepStatus');
+            const outEl = document.getElementById('deepSummary');
+            if (statusEl) statusEl.innerHTML = '<span class="spinner"></span> Running...';
+            outEl.textContent = '';
+            try {
+                const resp = await fetch(`/deep-analysis?dir=${encodeURIComponent(dir)}`);
+                if (!resp.ok) {
+                    const text = await resp.text();
+                    if (statusEl) statusEl.textContent = 'Error';
+                    outEl.textContent = text;
+                    return;
+                }
+                const data = await resp.json();
+                if (statusEl) statusEl.textContent = 'Done. (see summary below)';
+                const agg = data.aggregate || {};
+                const sb = agg.status_breakdown || {};
+                const lines = [];
+                lines.push(`Base: ${data.base_dir}`);
+                lines.push(`Total: ${data.total_experiments}  Success: ${data.successful_experiments}  Failed: ${data.failed_experiments}`);
+                if (typeof data.success_rate === 'number') {
+                    lines.push(`Success rate: ${(data.success_rate*100).toFixed(2)}%`);
+                }
+                lines.push(`Completed all decisions: ${agg.completed_all_decisions_count || 0}`);
+                lines.push(`Aborted: ${sb.aborted || 0}  Finished w/o success: ${sb.finished_no_success || 0}`);
+                lines.push(`Random choices: ${agg.random_choices_total || 0}  API failures: ${agg.api_failures_total || 0}`);
+                const ds = agg.decision_stats || {};
+                lines.push(`GT Decisions - RIGHT: ${ds.RIGHT||0}  WRONG: ${ds.WRONG||0}  UNKNOWN: ${ds.UNKNOWN||0}  Acc: ${((ds.accuracy||0)*100).toFixed(2)}%`);
+                const rds = agg.recalc_decision_stats;
+                if (rds && rds.RIGHT !== undefined) {
+                    lines.push(`RC Decisions - RIGHT: ${rds.RIGHT||0}  WRONG: ${rds.WRONG||0}  UNKNOWN: ${rds.UNKNOWN||0}  Acc: ${((rds.accuracy||0)*100).toFixed(2)}%`);
+                }
+                // Advanced metrics (optional)
+                try {
+                    const adv = agg.advanced || {};
+                    // SPL
+                    if (adv.spl && typeof adv.spl.mean === 'number') {
+                        const n = adv.spl.count || 0;
+                        lines.push(`SPL: ${(adv.spl.mean).toFixed(3)} (N=${n})`);
+                    }
+                    // Decisions per run
+                    if (adv.decisions_per_run && adv.decisions_per_run.summary) {
+                        const s = adv.decisions_per_run.summary;
+                        const mean = (s.mean ?? 0).toFixed(1);
+                        const median = (s.p50 ?? 0).toFixed(0);
+                        const minv = (s.min ?? 0).toFixed(0);
+                        const maxv = (s.max ?? 0).toFixed(0);
+                        lines.push(`Decisions per run: median ${median}, mean ${mean}, range ${minv}–${maxv}`);
+                    }
+                    // Min distance to polygon
+                    if (adv.min_distance_to_polygon_m && typeof adv.min_distance_to_polygon_m.mean === 'number') {
+                        const s = adv.min_distance_to_polygon_m;
+                        const mean = (s.mean).toFixed(0);
+                        const median = (s.p50).toFixed(0);
+                        lines.push(`Closest-to-polygon: median ${median} m, mean ${mean} m`);
+                    }
+                    // Path length
+                    if (adv.path_length_m && typeof adv.path_length_m.mean === 'number') {
+                        const s = adv.path_length_m;
+                        const mean = (s.mean/1000).toFixed(2);
+                        const median = (s.p50/1000).toFixed(2);
+                        lines.push(`Path length: median ${median} km, mean ${mean} km`);
+                    }
+                } catch (e) { /* ignore advanced rendering errors */ }
+                outEl.textContent = lines.join('\n');
+                outEl.classList.remove('pulse');
+                void outEl.offsetWidth; // reflow to restart animation
+                outEl.classList.add('pulse');
+
+                // Build details: show failed runs only with reason, plus token usage totals
+                const details = [];
+                try {
+                    const failed = (data.experiments || []).filter(r => !r.successful);
+                    if (failed.length > 0) {
+                        details.push('Failed runs: (reason, num_calls/max_decision_points)');
+                        failed.slice(0, 80).forEach(r => {
+                            const mdp = r && r.limits ? r.limits.max_decision_points : null;
+                            const num = r && r.api_calls ? r.api_calls.num_calls : null;
+                            const reason = r && r.failure_reason ? r.failure_reason : (r.status || 'failed');
+                            details.push(`- ${r.path}  ${reason}${(num!=null&&mdp)?` ${num}/${mdp}`:''}`);
+                        });
+                        if (failed.length > 80) details.push(`... and ${failed.length - 80} more`);
+                    }
+                    const usage = agg.api_usage_tokens || {};
+                    const usageLine = `Token usage: input=${usage.input_tokens||0} output=${usage.output_tokens||0} total=${usage.total_tokens||0}`;
+                    details.unshift(usageLine);
+                } catch (e) {
+                    // ignore
+                }
+                const detEl = document.getElementById('deepDetails');
+                if (detEl) {
+                    detEl.textContent = details.join('\n');
+                }
+            } catch (e) {
+                if (statusEl) statusEl.textContent = 'Error';
+                outEl.textContent = String(e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('btnAnalyze');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    const dir = document.getElementById('deepDir').value || '.';
+                    runDeepAnalysis(dir);
+                });
+            }
+            // Default: load current root into deep dir so user can immediately click Analyze if desired
+            const dirInput = document.getElementById('deepDir');
+            if (dirInput) dirInput.value = '.';
+
+            // Sidebar resizer wiring
+            const sidebar = document.getElementById('sidebar');
+            const resizer = document.getElementById('sidebar-resizer');
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+            function onMouseMove(e) {
+                if (!isResizing) return;
+                const dx = e.clientX - startX;
+                let newWidth = Math.max(220, Math.min(window.innerWidth * 0.6, startWidth + dx));
+                sidebar.style.width = newWidth + 'px';
+            }
+            function onMouseUp() {
+                if (!isResizing) return;
+                isResizing = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+            if (resizer && sidebar) {
+                resizer.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    startX = e.clientX;
+                    startWidth = sidebar.getBoundingClientRect().width;
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                    e.preventDefault();
+                });
+            }
+
+            // Toggle panel visibility and details
+            const panel = document.getElementById('deep-analysis-panel');
+            const content = document.getElementById('deep-panel-content');
+            const toggleBtn = document.getElementById('btnToggleDeep');
+            const detailBtn = document.getElementById('btnToggleDeepDetails');
+            if (toggleBtn && panel) {
+                toggleBtn.addEventListener('click', () => {
+                    if (content.style.display === 'none') {
+                        content.style.display = '';
+                        toggleBtn.textContent = 'Hide';
+                    } else {
+                        content.style.display = 'none';
+                        toggleBtn.textContent = 'Show';
+                    }
+                });
+            }
+            if (detailBtn) {
+                detailBtn.addEventListener('click', () => {
+                    const det = document.getElementById('deepDetails');
+                    if (!det) return;
+                    det.style.display = (det.style.display === 'none') ? '' : 'none';
+                });
+            }
+        });
+
+    </script>
+</body>
+</html>

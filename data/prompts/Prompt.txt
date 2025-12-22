@@ -1,0 +1,9 @@
+Write exact location of the destination as precise as you can as first sentence in analysis.
+Write current estimated exact location as next sentence. 
+One paragraph on reaching plan i.e. Write the walking directions from the current estimated location to the exact location of the destination.
+Put plan in memory with current progress. 
+Use images for analysis of current position and where to go. 
+If you see the destination in the image go in that direction.
+For each decision mention concrete reason as to why this decision was chosen. Exact perfect real reason. 
+If no such reason , it is a random exploration.
+You are navigating streetview panoramas where linking may be unexpected, so it is possible that direct route may not be possible. If stuck go around.

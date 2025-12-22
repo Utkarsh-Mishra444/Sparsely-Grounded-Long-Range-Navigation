@@ -1,0 +1,62 @@
+# Agent Navigation Configuration Template
+# Copy this file to config.yml and fill in your values
+
+batch_mode: false
+runs_per_path: 1
+paths_file: "data/paths/New_York.json"
+prompts_file: "data/prompts/Prompt.txt"
+base_log_dir: "logs"
+
+# Model selection (uncomment one)
+model_name: "gemini/gemini-2.5-flash"
+# model_name: "openai/gpt-4o"
+# model_name: "ollama/qwen2.5vl:32b"
+
+# Optional LLM parameters
+# llm_params:
+#   reasoning_effort: "high"
+
+# Strategy selection (uncomment ONE option below)
+# Option A: Baseline strategy
+# strategy_mode: baseline
+
+# Option B: Explicit strategy module (default: memory strategy)
+strategy_module: "strategies.memory_strategy"
+
+# API Keys - Set via environment variables (recommended):
+#   export GOOGLE_MAPS_API_KEY="your-google-maps-key"
+#   export STREETVIEW_SIGNING_SECRET="your-signing-secret"
+#   export OPENAI_API_KEY="your-openai-key"
+#   export GOOGLE_GEMINI_API_KEY="your-gemini-key"
+#
+# Or uncomment and set directly (NOT recommended for version control):
+# maps_api_key: ""
+# streetview_signing_secret: ""
+
+# Simulation parameters
+max_steps: 2000
+max_decision_points: 150
+enable_evaluations: false
+use_self_positioning: true
+
+# Toggle signed Street View Static requests (requires signing secret)
+use_signed_streetview: false
+
+# Environment initialization mode
+# Set to true to initialize from PANOID instead of coordinates
+# Requires startPanoId to be present in path data
+init_from_pano_id: true
+
+# Termination criteria control
+# Options: "distance", "polygon", "both"
+# - "distance": only use 50m radius distance check
+# - "polygon": only use polygon containment check
+# - "both": use both distance and polygon checks (agent terminates when either is met)
+termination_criteria: "polygon"
+
+# Resume options (uncomment to resume from a previous run)
+# resume_folder: "logs/2025-01-01_12-00-00_model_destination_path_01_s2000_d150"
+# is_resume: true
+# resume_from_decision: "latest"
+# resume_into_new_folder: true
+
