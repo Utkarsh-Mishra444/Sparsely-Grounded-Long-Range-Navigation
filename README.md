@@ -35,6 +35,9 @@ At each intersection, the agent:
 2. Reasons about its current location and route to the destination
 3. Selects which direction to proceed
 
+<img width="1186" height="608" alt="image" src="https://github.com/user-attachments/assets/a9400e62-432d-4148-967f-e0c9eae58284" />
+
+
 ---
 
 ## AgentNav Method
