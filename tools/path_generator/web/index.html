@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unified Path System</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+      /* Modern UI Styles */
+      :root {
+        --primary-color: #2563eb;
+        --primary-dark: #1d4ed8;
+        --secondary-color: #64748b;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --background-color: #f8fafc;
+        --card-bg: #ffffff;
+        --border-color: #e2e8f0;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-primary);
+        line-height: 1.5;
+      }
+
+      /* Header */
+      header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: var(--shadow-lg);
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 600;
+      }
+
+      /* Main Layout */
+      .app-container {
+        display: flex;
+        min-height: calc(100vh - 80px);
+        gap: 1.5rem;
+        padding: 1.5rem;
+        max-width: 1800px;
+        margin: 0 auto;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 400px;
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+
+      /* Fix for button overflow in Paths tab */
+      .sidebar .control-group .form-row .btn {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem;
+      }
+
+      .sidebar .control-group .form-row .btn-sm {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
+      }
+
+      /* Allow buttons to wrap instead of overflow */
+      .sidebar .control-group .form-row > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-start;
+      }
+
+      /* Make buttons wrap on smaller sidebar widths */
+      @media (max-width: 1400px) {
+        .sidebar {
+          width: 450px;
+        }
+      }
+
+      @media (max-width: 1200px) {
+        .sidebar .control-group .form-row {
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+      }
+
+      /* Main Content */
+      .main-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      /* Tabs */
+      .tabs {
+        display: flex;
+        background: var(--card-bg);
+        border-radius: 12px 12px 0 0;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .tab-button {
+        flex: 1;
+        padding: 1rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+        color: var(--text-secondary);
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+
+      .tab-button:hover {
+        background-color: #f1f5f9;
+        color: var(--text-primary);
+      }
+
+      .tab-button.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        background-color: #eff6ff;
+      }
+
+      .tab-content {
+        display: none;
+        padding: 1.5rem;
+        background: var(--card-bg);
+        border-radius: 0 0 12px 12px;
+        box-shadow: var(--shadow);
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      /* Control Groups */
+      .control-group {
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .control-group h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      /* Buttons */
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+      }
+
+      .btn-primary {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .btn-secondary {
+        background: var(--secondary-color);
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background: #475569;
+      }
+
+      .btn-success {
+        background: var(--success-color);
+        color: white;
+      }
+
+      .btn-success:hover {
+        background: #059669;
+      }
+
+      .btn-danger {
+        background: var(--danger-color);
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: #dc2626;
+      }
+
+      .btn-outline {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+      }
+
+      .btn-outline:hover {
+        background: var(--text-primary);
+        color: white;
+      }
+
+      /* Loading button state */
+      .btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .btn .fa-spinner {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      /* Form Controls */
+      .form-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        align-items: center;
+      }
+
+      .form-group {
+        flex: 1;
+      }
+
+      .form-group label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      /* Viewer Section */
+      .viewer-section {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+      }
+
+      .viewer-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        background: #f8fafc;
+      }
+
+      .viewer-header h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+
+      .viewer-content {
+        padding: 1.5rem;
+      }
+
+      .viewer-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+      }
+
+      #pano, #map {
+        height: 500px;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      /* Status and Notifications */
+      .status-bar {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--secondary-color);
+      }
+
+      .status-indicator.active {
+        background: var(--success-color);
+      }
+
+      .status-indicator.running {
+        background: var(--warning-color);
+      }
+
+      .status-indicator.error {
+        background: var(--danger-color);
+      }
+
+      /* Collapsible Sections */
+      .collapsible {
+        margin-bottom: 1rem;
+      }
+
+      .collapsible-header {
+        background: #f1f5f9;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s;
+      }
+
+      .collapsible-header:hover {
+        background: #e2e8f0;
+      }
+
+      .collapsible-header h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .collapsible-content {
+        display: none;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        background: white;
+      }
+
+      .collapsible-content.active {
+        display: block;
+      }
+
+      .toggle-icon {
+        transition: transform 0.2s;
+      }
+
+      .toggle-icon.active {
+        transform: rotate(180deg);
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1200px) {
+        .app-container {
+          flex-direction: column;
+        }
+        .sidebar {
+          width: 100%;
+        }
+        .viewer-row {
+          grid-template-columns: 1fr;
+        }
+        #pano, #map {
+          height: 400px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .app-container {
+          padding: 1rem;
+        }
+        .form-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .tabs {
+          flex-direction: column;
+        }
+        .tab-button {
+          justify-content: flex-start;
+        }
+      }
+
+      /* Compass Container */
+      .compass-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        margin: 1rem auto;
+        max-width: 300px;
+      }
+
+      .compass-face {
+        cursor: crosshair;
+        border-radius: 50%;
+        background: var(--card-bg);
+        border: 2px solid var(--border-color);
+        box-shadow: var(--shadow);
+        transition: box-shadow 0.2s;
+      }
+
+      .compass-face:hover {
+        box-shadow: var(--shadow-lg);
+      }
+
+      .compass-controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+      }
+
+      .compass-presets {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.25rem;
+        width: 100%;
+      }
+
+      .compass-preset {
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        background: var(--card-bg);
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        text-align: center;
+      }
+
+      .compass-preset:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+
+      .compass-preset.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+
+      .bias-indicator {
+        text-align: center;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-primary);
+      }
+
+      .bias-indicator.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+
+
+      /* Utility Classes */
+      .text-muted {
+        color: var(--text-secondary);
+      }
+
+      .mb-0 { margin-bottom: 0; }
+      .mb-1 { margin-bottom: 0.5rem; }
+      .mb-2 { margin-bottom: 1rem; }
+      .mb-3 { margin-bottom: 1.5rem; }
+
+      .hidden { display: none; }
+    </style>
+
+    <!-- Shared landmark data -->
+    <script src="landmarks.js"></script>
+    <!-- Core unified map, Street View, auto-route, backend controls, landmarks UI -->
+    <script src="app.js" defer></script>
+    <!-- Selector logic to view and export backend runs on the same map -->
+    <script src="selector.js" defer></script>
+    <!-- Dynamically load Google Maps with API key from server -->
+    <script>
+	      (async function() {
+	        try {
+	          const res = await fetch('http://127.0.0.1:8765/api/config');
+	          if (!res.ok) throw new Error('Config request failed: ' + res.status);
+	          const config = await res.json();
+	          if (!config || !config.googleMapsApiKey) {
+	            throw new Error('Missing GOOGLE_MAPS_API_KEY (server did not provide googleMapsApiKey)');
+	          }
+	          const script = document.createElement('script');
+	          script.src = `https://maps.googleapis.com/maps/api/js?key=${config.googleMapsApiKey}&libraries=places&callback=initMap`;
+	          script.defer = true;
+	          document.head.appendChild(script);
+	        } catch (e) {
+	          console.error('Failed to load config:', e);
+	          document.body.innerHTML = '<div style="padding:2rem;text-align:center;"><h2>Setup required</h2><p>Start the server with: <code>python -m src.server</code></p><p>And set <code>GOOGLE_MAPS_API_KEY</code> (in your environment or <code>.env</code>).</p><p>Then refresh this page.</p></div>';
+	        }
+	      })();
+	    </script>
+  </head>
+  <body>
+    <header>
+      <h1><i class="fas fa-route"></i> Unified Path System</h1>
+    </header>
+
+    <div class="app-container">
+      <!-- Sidebar with Tabs -->
+      <aside class="sidebar">
+        <div class="tabs">
+          <button class="tab-button active" data-tab="landmarks">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Landmarks</span>
+          </button>
+          <button class="tab-button" data-tab="paths">
+            <i class="fas fa-route"></i>
+            <span>Paths</span>
+          </button>
+          <button class="tab-button" data-tab="bulk">
+            <i class="fas fa-layer-group"></i>
+            <span>Bulk Ops</span>
+          </button>
+          <button class="tab-button" data-tab="settings">
+            <i class="fas fa-cog"></i>
+            <span>Settings</span>
+          </button>
+        </div>
+
+        <!-- Landmarks Tab -->
+        <div id="landmarks-tab" class="tab-content active">
+          <div class="control-group">
+            <h3><i class="fas fa-city"></i> City Selection</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="city">Select City</label>
+                <select id="city" class="form-control"></select>
+              </div>
+              <button id="fit" class="btn btn-primary">
+                <i class="fas fa-expand"></i> Fit View
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h3><i class="fas fa-search"></i> Search & Filter</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="placeSearch">Google Places Search</label>
+                <input id="placeSearch" type="search" class="form-control" placeholder="Search places..." />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="filter">Filter Landmarks</label>
+                <input id="filter" type="search" class="form-control" placeholder="Filter by name..." />
+              </div>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h3><i class="fas fa-draw-polygon"></i> Polygon Management</h3>
+            <div class="form-row">
+              <button id="togglePolygonEdit" class="btn btn-secondary">
+                <i class="fas fa-edit"></i> Edit Polygons
+              </button>
+            </div>
+            <div class="form-row">
+              <button id="exportPolygons" class="btn btn-outline">
+                <i class="fas fa-download"></i> Export
+              </button>
+              <button id="importPolygons" class="btn btn-outline">
+                <i class="fas fa-upload"></i> Import
+              </button>
+              <button id="resetPolygons" class="btn btn-danger">
+                <i class="fas fa-undo"></i> Reset
+              </button>
+            </div>
+          </div>
+
+          <div id="list" class="control-group">
+            <h3><i class="fas fa-list"></i> Landmark List</h3>
+            <p class="text-muted mb-0">Click a marker to see details, coordinates, and Street View availability within 50m.</p>
+          </div>
+
+          <div id="error" class="text-muted"></div>
+        </div>
+
+        <!-- Paths Tab -->
+        <div id="paths-tab" class="tab-content">
+          <div class="control-group">
+            <h3><i class="fas fa-filter"></i> Path Filters</h3>
+            <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 6px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.9rem;">
+              <i class="fas fa-database" style="color: #0ea5e9; margin-right: 0.5rem;"></i>
+              <strong>Database Mode:</strong> Shows all completed runs from database. Use "Load All Paths" to view stored runs. Switch to "Bulk Ops" tab for live jobs only.
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="selector-city-filter">City Filter</label>
+                <select id="selector-city-filter" class="form-control">
+                  <option value="ALL">All Cities</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="selector-destination-filter">Destination Filter</label>
+                <select id="selector-destination-filter" class="form-control" disabled>
+                  <option value="ALL">All Destinations</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="selector-sort-by">Sort By</label>
+                <select id="selector-sort-by" class="form-control">
+                  <option value="displacement" selected>Displacement</option>
+                  <option value="points">Points</option>
+                  <option value="decisions">Decisions</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="selector-sort-order">Order</label>
+                <select id="selector-sort-order" class="form-control">
+                  <option value="desc" selected>High → Low</option>
+                  <option value="asc">Low → High</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions Bar (moved to top) -->
+          <div class="control-group" style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 1px solid #0ea5e9;">
+            <div class="form-row" style="justify-content: space-between; align-items: center;">
+              <div style="display: flex; gap: 1rem; align-items: center;">
+                <span id="selected-count" style="font-weight: 500; color: #0ea5e9;">0 paths selected</span>
+                <small style="color: #64748b; font-size: 0.85rem;">Toggle to show all paths or live-only</small>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="selector-load-all-paths" class="btn btn-primary btn-sm">
+                  <i class="fas fa-database"></i> Load All Paths
+                </button>
+                <button id="selector-select-all" class="btn btn-secondary btn-sm">
+                  <i class="fas fa-check-double"></i> Select All
+                </button>
+                <button id="selector-unselect-all" class="btn btn-outline btn-sm">
+                  <i class="fas fa-times"></i> Deselect All
+                </button>
+                <button id="selector-download-json" class="btn btn-success">
+                  <i class="fas fa-download"></i> Export Selected
+                </button>
+                <button id="selector-delete-selected" class="btn btn-danger">
+                  <i class="fas fa-trash"></i> Delete Selected
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h3><i class="fas fa-list-check"></i> Path Selection</h3>
+            <div id="selector-path-list"></div>
+          </div>
+
+          <div class="legend">
+            <h4><i class="fas fa-info-circle"></i> Legend</h4>
+            <div id="selector-legend-items"></div>
+          </div>
+        </div>
+
+        <!-- Bulk Operations Tab -->
+        <div id="bulk-tab" class="tab-content">
+          <div class="control-group">
+            <h3><i class="fas fa-cogs"></i> Bulk Computation</h3>
+            <div style="background: #e3f2fd; border: 1px solid #2196f3; border-radius: 6px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.9rem;">
+              <i class="fas fa-info-circle" style="color: #2196f3; margin-right: 0.5rem;"></i>
+              <strong>Bulk Mode:</strong> Only live jobs (currently running) are shown on this tab. Switch to "Paths" tab to see completed runs from database.
+            </div>
+            <div class="form-row">
+              <button id="bulk-refresh" class="btn btn-secondary">
+                <i class="fas fa-sync"></i> Refresh
+              </button>
+              <button id="bulk-validate-seeds" class="btn btn-primary">
+                <i class="fas fa-check-circle"></i> Validate Seeds
+              </button>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="bulk-target-distance">Target Distance (m)</label>
+                <input id="bulk-target-distance" type="number" min="50" step="10" value="2000" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label for="bulk-runs-per-dest">Runs per Destination</label>
+                <input id="bulk-runs-per-dest" type="number" min="1" step="1" value="10" class="form-control" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="bulk-min-existing">Skip if ≥ N runs exist</label>
+                <input id="bulk-min-existing" type="number" min="0" step="1" value="10" class="form-control" />
+              </div>
+            </div>
+
+            <!-- Direction Bias Controls -->
+            <div class="form-row">
+              <div class="form-group">
+                <label for="bulk-bias-decisions">Bias first N decisions towards:</label>
+                <input id="bulk-bias-decisions" type="number" min="0" step="1" value="3" class="form-control" placeholder="Number of biased decisions" />
+              </div>
+            </div>
+
+            <!-- Compass Needle -->
+            <div class="form-row">
+              <div class="form-group">
+                <label>Direction Bias</label>
+                <div class="bias-indicator">
+                  <span id="current-bias-text">Current: No bias</span>
+                </div>
+                <div id="compass-container" class="compass-container">
+                  <div class="compass-face">
+                    <svg id="compass-svg" width="200" height="200" viewBox="0 0 200 200">
+                      <!-- Compass circle -->
+                      <circle cx="100" cy="100" r="90" fill="none" stroke="var(--border-color)" stroke-width="2"/>
+                      <circle cx="100" cy="100" r="80" fill="none" stroke="var(--border-color)" stroke-width="1" opacity="0.3"/>
+
+                      <!-- Degree markings -->
+                      <g id="degree-marks">
+                        <!-- Major marks (every 45°) -->
+                        <line x1="100" y1="15" x2="100" y2="25" stroke="var(--text-secondary)" stroke-width="2"/>
+                        <line x1="100" y1="175" x2="100" y2="185" stroke="var(--text-secondary)" stroke-width="2"/>
+                        <line x1="15" y1="100" x2="25" y2="100" stroke="var(--text-secondary)" stroke-width="2"/>
+                        <line x1="175" y1="100" x2="185" y2="100" stroke="var(--text-secondary)" stroke-width="2"/>
+                        <line x1="30" y1="30" x2="40" y2="40" stroke="var(--text-secondary)" stroke-width="2"/>
+                        <line x1="160" y1="160" x2="170" y2="170" stroke="var(--text-secondary)" stroke-width="2"/>
+                        <line x1="160" y1="40" x2="170" y2="30" stroke="var(--text-secondary)" stroke-width="2"/>
+                        <line x1="30" y1="170" x2="40" y2="160" stroke="var(--text-secondary)" stroke-width="2"/>
+                      </g>
+
+                      <!-- Cardinal directions -->
+                      <text x="100" y="35" text-anchor="middle" font-size="12" fill="var(--text-primary)" font-weight="bold">N</text>
+                      <text x="100" y="175" text-anchor="middle" font-size="12" fill="var(--text-primary)" font-weight="bold">S</text>
+                      <text x="175" y="105" text-anchor="start" font-size="12" fill="var(--text-primary)" font-weight="bold">E</text>
+                      <text x="25" y="105" text-anchor="end" font-size="12" fill="var(--text-primary)" font-weight="bold">W</text>
+
+                      <!-- Compass needle -->
+                      <g id="compass-needle" transform="rotate(0, 100, 100)">
+                        <polygon points="100,30 95,100 100,110 105,100" fill="var(--danger-color)" stroke="var(--danger-color)" stroke-width="1"/>
+                        <polygon points="100,170 95,100 100,90 105,100" fill="var(--text-secondary)" stroke="var(--text-secondary)" stroke-width="1"/>
+                        <circle cx="100" cy="100" r="8" fill="var(--card-bg)" stroke="var(--border-color)" stroke-width="2"/>
+                        <circle cx="100" cy="100" r="4" fill="var(--border-color)"/>
+                      </g>
+                    </svg>
+                  </div>
+                  <div class="compass-controls">
+                    <button id="reset-compass" class="btn btn-outline btn-sm">
+                      <i class="fas fa-times"></i> No Bias
+                    </button>
+                    <div class="compass-presets">
+                      <button class="compass-preset" data-angle="0">N</button>
+                      <button class="compass-preset" data-angle="45">NE</button>
+                      <button class="compass-preset" data-angle="90">E</button>
+                      <button class="compass-preset" data-angle="135">SE</button>
+                      <button class="compass-preset" data-angle="180">S</button>
+                      <button class="compass-preset" data-angle="225">SW</button>
+                      <button class="compass-preset" data-angle="270">W</button>
+                      <button class="compass-preset" data-angle="315">NW</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h3><i class="fas fa-play-circle"></i> Bulk Actions</h3>
+            <div class="form-row">
+              <button id="bulk-select-all" class="btn btn-secondary">
+                <i class="fas fa-check-square"></i> Select All
+              </button>
+              <button id="bulk-unselect-all" class="btn btn-outline">
+                <i class="fas fa-square"></i> Unselect All
+              </button>
+            </div>
+            <div class="form-row">
+              <button id="bulk-start" class="btn btn-success">
+                <i class="fas fa-play"></i> Start Bulk
+              </button>
+              <button id="bulk-commit-live" class="btn btn-primary">
+                <i class="fas fa-save"></i> Commit to DB
+              </button>
+              <button id="bulk-stats" class="btn btn-outline">
+                <i class="fas fa-chart-bar"></i> Live Stats
+              </button>
+            </div>
+            <div class="form-row">
+              <label style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="bulk-show-active-only" checked />
+                <span>Show only active runs during bulk operations</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="bulk-list"></div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content">
+          <div class="control-group">
+            <h3><i class="fas fa-file-export"></i> Export Settings</h3>
+            <div class="form-row">
+              <label>
+                <input type="checkbox" id="includePanoId" checked />
+                Include panoId
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <input type="checkbox" id="includePosition" checked />
+                Include position
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <input type="checkbox" id="includeDistance" checked />
+                Include walking distance/time
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <input type="checkbox" id="includeDescription" checked />
+                Include point descriptions
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                <input type="checkbox" id="includeDestination" checked />
+                Include destination name
+              </label>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h3><i class="fas fa-cog"></i> System Settings</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="polygonFilePath">Polygon File Path</label>
+                <input id="polygonFilePath" type="text" class="form-control" placeholder="Auto-loads data/polygons.json" />
+                <small id="polygonSourceIndicator" class="text-muted">Using data/polygons.json</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Status Bar -->
+        <div class="status-bar">
+          <div class="status-indicator" id="backend-status"></div>
+          <span id="status-text">Ready</span>
+          <div class="status-indicator hidden" id="auto-status"></div>
+          <span id="auto-status-text" class="hidden">Auto-routing inactive</span>
+        </div>
+
+        <!-- Map and Street View -->
+        <section class="viewer-section">
+          <div class="viewer-header">
+            <h2><i class="fas fa-map"></i> Map & Street View</h2>
+          </div>
+          <div class="viewer-content">
+            <div class="viewer-row">
+              <div id="pano"></div>
+              <div id="map"></div>
+            </div>
+            <div id="notification" class="hidden"></div>
+          </div>
+        </section>
+
+        <!-- Path Creation Controls -->
+        <section class="viewer-section">
+          <div class="viewer-header">
+            <h2><i class="fas fa-tools"></i> Path Creation Tools</h2>
+          </div>
+          <div class="viewer-content">
+            <!-- Primary Actions -->
+            <div class="control-group">
+              <h3><i class="fas fa-mouse-pointer"></i> Primary Actions</h3>
+              <div class="form-row">
+                <button id="setStart" class="btn btn-primary">
+                  <i class="fas fa-play-circle"></i> Set Start (S)
+                </button>
+                <button id="setEnd" class="btn btn-primary">
+                  <i class="fas fa-stop-circle"></i> Set End (E)
+                </button>
+                <button id="addSeedPano" class="btn btn-secondary">
+                  <i class="fas fa-plus-circle"></i> Add Seed Pano
+                </button>
+                <button id="addPath" class="btn btn-secondary">
+                  <i class="fas fa-route"></i> Add Path (A)
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Tools -->
+            <div class="control-group">
+              <h3><i class="fas fa-wrench"></i> Quick Tools</h3>
+              <div class="form-row">
+                <button id="toggleCoverage" class="btn btn-outline">
+                  <i class="fas fa-eye"></i> Toggle Coverage (T)
+                </button>
+                <button id="calcDistance" class="btn btn-outline">
+                  <i class="fas fa-ruler"></i> Calculate Distance (D)
+                </button>
+                <button id="done" class="btn btn-success">
+                  <i class="fas fa-check-circle"></i> Done & Download
+                </button>
+                <button id="commitLocal" class="btn btn-primary">
+                  <i class="fas fa-save"></i> Commit to DB
+                </button>
+              </div>
+            </div>
+
+            <!-- Advanced Controls (Collapsible) -->
+            <div class="collapsible">
+              <div class="collapsible-header" data-target="advanced-controls">
+                <h3><i class="fas fa-sliders-h"></i> Advanced Controls</h3>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+              </div>
+              <div id="advanced-controls" class="collapsible-content">
+                <!-- Auto Routing -->
+                <div class="control-group">
+                  <h3><i class="fas fa-robot"></i> Auto Routing</h3>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="autoDiscoveryRadius">Search Radius (m)</label>
+                      <input id="autoDiscoveryRadius" type="number" min="5" step="5" value="80" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                      <label for="autoTargetDistance">Exploration Distance (m)</label>
+                      <input id="autoTargetDistance" type="number" min="50" step="10" value="400" class="form-control" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <button id="autoStart" class="btn btn-success">
+                      <i class="fas fa-play"></i> Start Auto Route
+                    </button>
+                    <button id="autoStop" class="btn btn-danger">
+                      <i class="fas fa-stop"></i> Stop Auto Route
+                    </button>
+                    <button id="downloadRoutes" class="btn btn-primary">
+                      <i class="fas fa-download"></i> Download Routes
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Backend Computation -->
+                <div class="control-group">
+                  <h3><i class="fas fa-server"></i> Backend Computation</h3>
+                  <div class="form-row">
+                    <button id="backendStart" class="btn btn-success">
+                      <i class="fas fa-play"></i> Start Backend
+                    </button>
+                    <button id="backendStop" class="btn btn-danger">
+                      <i class="fas fa-stop"></i> Stop Backend
+                    </button>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="batchNumRuns">Number of Runs</label>
+                      <input id="batchNumRuns" type="number" min="1" step="1" value="3" class="form-control" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <button id="backendStartBatch" class="btn btn-success">
+                      <i class="fas fa-layer-group"></i> Start Batch
+                    </button>
+                    <button id="backendStopBatch" class="btn btn-danger">
+                      <i class="fas fa-stop"></i> Stop Batch
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Destination Settings -->
+                <div class="control-group">
+                  <h3><i class="fas fa-bullseye"></i> Destination Settings</h3>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="destinationName">Destination Name</label>
+                      <input id="destinationName" type="text" class="form-control" placeholder="e.g., Empire State Building" />
+                    </div>
+                    <div class="form-group">
+                      <label for="destinationRadius">Destination Radius (m)</label>
+                      <input id="destinationRadius" type="number" min="0" step="1" value="50" class="form-control" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- JSON Preview -->
+        <section class="viewer-section">
+          <div class="viewer-header">
+            <h2><i class="fas fa-code"></i> JSON Preview</h2>
+          </div>
+          <div class="viewer-content">
+            <pre id="output" style="background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; overflow-x: auto;"></pre>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Coordinates Display -->
+    <div id="coords-box">
+      <p id="coords-json">{ lat: --, lng: -- }</p>
+      <p id="coords-string">--, --</p>
+    </div>
+
+    <!-- Tab Switching Script -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+          button.addEventListener('click', () => {
+            // Remove active class from all buttons and contents
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Add active class to clicked button and corresponding content
+            button.classList.add('active');
+            const tabId = button.getAttribute('data-tab') + '-tab';
+            document.getElementById(tabId).classList.add('active');
+
+            // Re-render paths when switching tabs to apply correct filtering
+            setTimeout(() => {
+              if (typeof window.renderAll === 'function') {
+                window.renderAll();
+              }
+            }, 10);
+          });
+        });
+
+        // Collapsible sections
+        const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+
+        collapsibleHeaders.forEach(header => {
+          header.addEventListener('click', () => {
+            const targetId = header.getAttribute('data-target');
+            const content = document.getElementById(targetId);
+            const icon = header.querySelector('.toggle-icon');
+
+            content.classList.toggle('active');
+            icon.classList.toggle('active');
+          });
+        });
+
+        // Function to update selected count display
+        function updateSelectedCount() {
+          const selectedPaths = document.querySelectorAll('#selector-path-list .path-item.selected');
+          const selectedCount = document.getElementById('selected-count');
+          if (selectedCount) {
+            selectedCount.textContent = `${selectedPaths.length} path${selectedPaths.length !== 1 ? 's' : ''} selected`;
+          }
+        }
+
+        // Update selected count on path selection changes
+        const mainPathList = document.getElementById('selector-path-list');
+        if (mainPathList) {
+          // Use event delegation for dynamic content
+          mainPathList.addEventListener('click', function(e) {
+            if (e.target.closest('.path-item') && !e.target.closest('.path-checkbox')) {
+              setTimeout(updateSelectedCount, 10); // Small delay to let selection update
+            }
+          });
+
+          mainPathList.addEventListener('change', function(e) {
+            if (e.target.type === 'checkbox') {
+              setTimeout(updateSelectedCount, 10);
+            }
+          });
+        }
+
+        // Update selected count when Select All/Deselect All buttons are clicked
+        const selectAllBtn = document.getElementById('selector-select-all');
+        const deselectAllBtn = document.getElementById('selector-unselect-all');
+
+        if (selectAllBtn) {
+          selectAllBtn.addEventListener('click', function() {
+            setTimeout(updateSelectedCount, 50); // Longer delay to let all selections complete
+          });
+        }
+
+        if (deselectAllBtn) {
+          deselectAllBtn.addEventListener('click', function() {
+            setTimeout(updateSelectedCount, 50); // Longer delay to let all deselections complete
+          });
+        }
+
+        // Initialize selected count
+        updateSelectedCount();
+      });
+    </script>
+  </body>
+</html>
+

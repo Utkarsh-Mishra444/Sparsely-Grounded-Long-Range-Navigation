@@ -1,0 +1,10 @@
+Flask>=2.0.0
+flask-cors>=3.0.0
+FastAPI>=0.68.0
+uvicorn>=0.15.0
+pydantic>=1.8.0
+playwright>=1.15.0
+lmdb>=1.0.0
+requests>=2.26.0
+polyline>=1.4.0
+python-dotenv>=0.19.0

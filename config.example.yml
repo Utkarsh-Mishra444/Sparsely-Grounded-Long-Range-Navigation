@@ -1,0 +1,109 @@
+# Navigation System Configuration
+# Copy this file to config.yml and fill in your values
+
+# ============================================================
+# RUN SETTINGS
+# ============================================================
+
+batch_mode: false
+runs_per_path: 1
+paths_file: "data/paths/New_York.json"
+prompts_file: "data/prompts/Prompt.txt"
+base_log_dir: "logs"
+
+# ============================================================
+# MODEL CONFIGURATION
+# ============================================================
+
+# Model selection (uncomment one)
+model_name: "gemini/gemini-2.5-flash"
+# model_name: "openai/gpt-4o"
+# model_name: "ollama/qwen2.5vl:32b"
+
+# Optional LLM parameters
+# llm_params:
+#   reasoning_effort: "high"
+
+# ============================================================
+# STRATEGY SELECTION
+# ============================================================
+
+# Strategy module options:
+# - "strategies.agent_nav": Main navigation strategy (recommended)
+# - "strategies.baseline": Basic baseline strategy for comparison
+strategy_module: "strategies.agent_nav"
+
+# ============================================================
+# API KEYS
+# ============================================================
+
+# Set via environment variables (recommended):
+#   export GOOGLE_MAPS_API_KEY="your-google-maps-key"
+#   export GEMINI_API_KEY="your-gemini-key"
+#   export OPENAI_API_KEY="your-openai-key"
+#
+# Or set directly here (NOT recommended for version control):
+# maps_api_key: "YOUR_GOOGLE_MAPS_API_KEY"
+# streetview_signing_secret: "YOUR_SIGNING_SECRET"
+
+# ============================================================
+# NAVIGATION LIMITS
+# ============================================================
+
+max_steps: 2000
+max_decision_points: 150
+
+# ============================================================
+# FEATURES
+# ============================================================
+
+# Enable self-positioning (LLM guesses current location from images)
+use_self_positioning: true
+
+# Enable LLM evaluations (slower, more detailed analysis)
+enable_evaluations: false
+
+# Toggle signed Street View Static requests (requires signing secret)
+use_signed_streetview: false
+
+# Initialize from panorama ID instead of coordinates
+init_from_pano_id: true
+
+# Enable dead-end pruning (mark directions that lead nowhere)
+enable_deadend_pruning: true
+
+# Termination criteria: "distance" (50m radius), "polygon", or "both"
+termination_criteria: "polygon"
+
+# ============================================================
+# SELF-POSITIONING CONFIGURATION
+# ============================================================
+
+# These settings control the self-positioning agent behavior.
+# Defaults are sensible - only override if needed.
+
+variant_params:
+  # Number of past position estimates to remember (prevents location jumps)
+  self_pos_memory_size: 5
+
+  # Grid of panorama tiles for self-positioning
+  grid_params:
+    X: 4  # Columns (horizontal tiles)
+    Y: 3  # Rows (vertical tiles)
+
+  # Which tiles to use: "all", "middle_row" (default), "first_row", "last_row"
+  grid_selection: "middle_row"
+
+  # Run self-positioning every N steps
+  self_position_interval: 1
+
+# ============================================================
+# RESUME OPTIONS
+# ============================================================
+
+# Uncomment to resume from a previous run
+# resume_folder: "logs/2025-01-01_12-00-00_model_destination_path_01_s2000_d150"
+# is_resume: true
+# resume_from_decision: "latest"
+# resume_into_new_folder: true
+
