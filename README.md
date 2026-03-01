@@ -6,7 +6,7 @@
 Official implementation for **"City Navigation in the Wild: Exploring Emergent Navigation from Web-Scale Knowledge in MLLMs"**.
 
 **[Project Page](https://dwipddalal.github.io/AgentNav/)** | **[Paper (arXiv)](https://arxiv.org/abs/2512.15933)** | **[Dataset](https://docs.google.com/forms/d/e/1FAIpQLScib58bH6JT2I9TCzmp9q7NebJLl1MBCwpmyeoxPmv1EpCqQA/viewform)**
-
+> 🛠️ **Want to fork or build on top of this?** Start with [`SYSTEM_ARCHITECTURE.md`](SYSTEM_ARCHITECTURE.md) — it covers every module, how they connect, and the reasoning behind key design decisions.
 <!-- See project page for figures: https://dwipddalal.github.io/AgentNav/ -->
 
 ---
