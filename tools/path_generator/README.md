@@ -34,6 +34,12 @@ Browse and compare multiple experiment runs. Tracks success/failure status and s
 
 ---
 
+## Usage Guide
+
+For a complete walkthrough of how to use the path generator — including adding seed panos, running bulk path generation, monitoring jobs, and exporting paths — see **[USAGE_GUIDE.md](USAGE_GUIDE.md)**.
+
+---
+
 ## Quick Start
 
 1. **Install dependencies:**
