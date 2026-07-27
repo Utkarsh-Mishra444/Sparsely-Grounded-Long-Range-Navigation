@@ -1,11 +1,16 @@
-# CityNav: City Navigation in the Wild
+# AgentNav: Can MLLMs Find Their Way in a City?
 
+[![EACL 2026 Oral](https://img.shields.io/badge/EACL%202026-Oral-2b6cb0.svg)](https://aclanthology.org/2026.eacl-long.387/)
+[![arXiv](https://img.shields.io/badge/arXiv-2512.15933-b31b1b.svg)](https://arxiv.org/abs/2512.15933)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)](https://github.com)
 
-Official implementation for **"City Navigation in the Wild: Exploring Emergent Navigation from Web-Scale Knowledge in MLLMs"**.
+Official implementation for **"Can MLLMs Find Their Way in a City? Exploring Emergent Navigation from Web-Scale Knowledge"** (EACL 2026, Oral). Includes the **CityNav** benchmark and the **AgentNav** zero-shot city-navigation framework built on multimodal large language models (MLLMs).
 
-**[Project Page](https://dwipddalal.github.io/AgentNav/)** | **[Paper (arXiv)](https://arxiv.org/abs/2512.15933)** | **[Dataset](https://docs.google.com/forms/d/e/1FAIpQLScib58bH6JT2I9TCzmp9q7NebJLl1MBCwpmyeoxPmv1EpCqQA/viewform)**
+**[Project Page](https://dwipddalal.github.io/AgentNav/)** | **[Paper (EACL 2026)](https://aclanthology.org/2026.eacl-long.387/)** | **[arXiv](https://arxiv.org/abs/2512.15933)** | **[Dataset](https://docs.google.com/forms/d/e/1FAIpQLScib58bH6JT2I9TCzmp9q7NebJLl1MBCwpmyeoxPmv1EpCqQA/viewform)**
+
+> Note: the arXiv preprint previously appeared under the title "City Navigation in the Wild: Exploring Emergent Navigation from Web-Scale Knowledge in MLLMs".
+
 > 🛠️ **Want to fork or build on top of this?** Start with [`SYSTEM_ARCHITECTURE.md`](SYSTEM_ARCHITECTURE.md) — it covers every module, how they connect, and the reasoning behind key design decisions.
 <!-- See project page for figures: https://dwipddalal.github.io/AgentNav/ -->
 
@@ -292,10 +297,19 @@ Then open `http://localhost:8000` in your browser.
 ## Citation
 
 ```bibtex
-@article{dalal2025city,
-  title={City Navigation in the Wild: Exploring Emergent Navigation from Web-Scale Knowledge in MLLMs},
-  author={Dalal, Dwip and Mishra, Utkarsh and Ahuja, Narendra and Jojic, Nebojsa},
-  journal={arXiv preprint arXiv:2512.15933},
-  year={2025}
+@inproceedings{dalal-etal-2026-mllms,
+    title = "Can {MLLM}s Find Their Way in a City? Exploring Emergent Navigation from Web-Scale Knowledge",
+    author = "Dalal, Dwip  and
+      Mishra, Utkarsh  and
+      Ahuja, Narendra  and
+      Jojic, Nebojsa",
+    booktitle = "Proceedings of the 19th Conference of the {E}uropean Chapter of the {A}ssociation for {C}omputational {L}inguistics (Volume 1: Long Papers)",
+    month = mar,
+    year = "2026",
+    address = "Rabat, Morocco",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.eacl-long.387/",
+    doi = "10.18653/v1/2026.eacl-long.387",
+    pages = "8279--8303"
 }
 ```
