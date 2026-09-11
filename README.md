@@ -9,7 +9,7 @@ Official implementation for **"Can MLLMs Find Their Way in a City? Exploring Eme
 
 **[Project Page](https://dwipddalal.github.io/AgentNav/)** | **[Paper (EACL 2026)](https://aclanthology.org/2026.eacl-long.387/)** | **[arXiv](https://arxiv.org/abs/2512.15933)** | **[Dataset](https://docs.google.com/forms/d/e/1FAIpQLScib58bH6JT2I9TCzmp9q7NebJLl1MBCwpmyeoxPmv1EpCqQA/viewform)**
 
-> Note: the arXiv preprint previously appeared under the title "City Navigation in the Wild: Exploring Emergent Navigation from Web-Scale Knowledge in MLLMs".
+> **One work, two titles:** ["City Navigation in the Wild: Exploring Emergent Navigation from Web-Scale Knowledge in MLLMs"](https://arxiv.org/abs/2512.15933) (arXiv:2512.15933, 2025) is the preprint of the EACL 2026 paper above. For AgentNav, CityNav, or Verbalization of Path, please use the [published citation](#citation), DOI [10.18653/v1/2026.eacl-long.387](https://doi.org/10.18653/v1/2026.eacl-long.387).
 
 > 🛠️ **Want to fork or build on top of this?** Start with [`SYSTEM_ARCHITECTURE.md`](SYSTEM_ARCHITECTURE.md) — it covers every module, how they connect, and the reasoning behind key design decisions.
 <!-- See project page for figures: https://dwipddalal.github.io/AgentNav/ -->
@@ -295,6 +295,10 @@ Then open `http://localhost:8000` in your browser.
 ---
 
 ## Citation
+
+Please cite the EACL 2026 publication when using AgentNav, CityNav, or Verbalization of Path. GitHub's **Cite this repository** button uses the paper metadata in [`CITATION.cff`](CITATION.cff).
+
+[Download BibTeX](https://dwipddalal.github.io/AgentNav/citation.bib) · [Download RIS for Zotero / EndNote](https://dwipddalal.github.io/AgentNav/citation.ris)
 
 ```bibtex
 @inproceedings{dalal-etal-2026-mllms,
